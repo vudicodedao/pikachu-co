@@ -1,0 +1,20 @@
+HƯỚNG DẪN NẠP 36 ẢNH BẠN GÁI VÀO GAME PIKACHU
+==================================================
+
+Bạn có 2 cách cực kỳ đơn giản để đưa ảnh bạn gái vào game:
+
+CÁCH 1: NẠP QUA GIAO DIỆN WEB (Khuyên dùng - Nhanh nhất)
+- Mở game trên trình duyệt.
+- Bấm vào nút "Nạp ảnh" màu hồng ở góc trên bên phải màn hình.
+- Kéo thả cả 36 tấm ảnh vào khung (hoặc bấm để chọn 36 ảnh cùng lúc).
+- Game sẽ tự động nhận diện, cắt vuông lấy tâm (center-crop), tối ưu dung lượng và lưu an toàn vào máy tính của bạn.
+
+CÁCH 2: NẠP VÀO THƯ MỤC NÀY
+- Bạn copy 36 ảnh bạn gái vào chính thư mục này: public/photos/
+- Đổi tên ảnh từ 1.jpg đến 36.jpg:
+    1.jpg
+    2.jpg
+    3.jpg
+    ...
+    36.jpg
+- Bật lại game, hệ thống sẽ tự động tải các ảnh này lên bàn cờ!
