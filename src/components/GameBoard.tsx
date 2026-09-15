@@ -10,6 +10,7 @@ interface GameBoardProps {
   hintPair: { p1: Position; p2: Position } | null;
   lastPath: Position[] | null;
   customPhotos: Record<number, string>;
+  rotations?: number[][] | null;
   onTileClick: (pos: Position) => void;
 }
 
@@ -19,6 +20,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   hintPair,
   lastPath,
   customPhotos,
+  rotations,
   onTileClick,
 }) => {
   const gridContainerRef = useRef<HTMLDivElement | null>(null);
@@ -83,6 +85,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                 (hintPair.p2.r === r && hintPair.p2.c === c));
 
             const imgUrl = getTilePhotoUrl(tileType, customPhotos);
+            const rotationAngle = rotations?.[r]?.[c] || 0;
 
             return (
               <button
@@ -118,6 +121,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                     if (target.src !== fallback) {
                       target.src = fallback;
                     }
+                  }}
+                  style={{
+                    transform: rotationAngle ? `rotate(${rotationAngle}deg)` : undefined,
                   }}
                   className="w-full h-full object-cover select-none pointer-events-none transition-transform duration-200 group-hover:brightness-110"
                   loading="lazy"

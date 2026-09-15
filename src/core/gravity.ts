@@ -1,5 +1,5 @@
 import { GravityType, StageConfig } from '../types/game';
-import { BOARD_ROWS, BOARD_COLS, shuffleBoardInPlace } from './algorithm';
+import { BOARD_ROWS, BOARD_COLS, TOTAL_ROWS, TOTAL_COLS, shuffleBoardInPlace } from './algorithm';
 
 export const STAGE_CONFIGS: StageConfig[] = [
   {
@@ -7,58 +7,73 @@ export const STAGE_CONFIGS: StageConfig[] = [
     name: 'Màn 1: Yên Bình',
     description: 'Bàn cờ cố định, không có trọng lực.',
     gravity: 'static',
-    timeSeconds: 300,
+    timeSeconds: 600, // 10 phút mặc định
   },
   {
     stage: 2,
     name: 'Màn 2: Rơi Tự Do',
     description: 'Các ô phía trên rơi xuống đáy cột.',
     gravity: 'down',
-    timeSeconds: 280,
+    timeSeconds: 600,
   },
   {
     stage: 3,
     name: 'Màn 3: Bay Lên Trời',
     description: 'Các ô phía dưới bị hút lên đỉnh cột.',
     gravity: 'up',
-    timeSeconds: 260,
+    timeSeconds: 600,
   },
   {
     stage: 4,
     name: 'Màn 4: Trôi Về Trái',
     description: 'Các ô trong hàng dồn hết về bên trái.',
     gravity: 'left',
-    timeSeconds: 240,
+    timeSeconds: 600,
   },
   {
     stage: 5,
     name: 'Màn 5: Tấp Về Phải',
     description: 'Các ô trong hàng dồn hết về bên phải.',
     gravity: 'right',
-    timeSeconds: 220,
+    timeSeconds: 600,
   },
   {
     stage: 6,
     name: 'Màn 6: Hút Vào Tâm',
     description: 'Hai bên dồn vào trục giữa bàn cờ.',
     gravity: 'center',
-    timeSeconds: 200,
+    timeSeconds: 600,
   },
   {
     stage: 7,
     name: 'Màn 7: Bung Sang Biên',
     description: 'Các ô từ giữa bị đẩy dạt ra hai mép ngoài.',
     gravity: 'split',
-    timeSeconds: 180,
+    timeSeconds: 600,
   },
   {
     stage: 8,
     name: 'Màn 8: Hỗn Loạn',
     description: 'Mỗi lần ăn thành công, toàn bộ vị trí bị xáo trộn!',
     gravity: 'shuffle',
-    timeSeconds: 180,
+    timeSeconds: 600,
+  },
+  {
+    stage: 9,
+    name: 'Màn 9: Ảo Giác Xoay 4 Hướng',
+    description: 'Ảnh bị xoay 90°, 180°, 270° ngẫu nhiên thách thức thị giác!',
+    gravity: 'rotate',
+    timeSeconds: 600,
   },
 ];
+
+// Sinh ma trận góc xoay 4 hướng (0, 90, 180, 270 độ) cho Màn 9
+export function generateRotations(): number[][] {
+  const angles = [0, 90, 180, 270];
+  return Array.from({ length: TOTAL_ROWS }, () =>
+    Array.from({ length: TOTAL_COLS }, () => angles[Math.floor(Math.random() * angles.length)])
+  );
+}
 
 // Áp dụng cơ chế dồn ô theo loại trọng lực
 export function applyGravity(board: number[][], gravity: GravityType): number[][] {
@@ -66,6 +81,7 @@ export function applyGravity(board: number[][], gravity: GravityType): number[][
 
   switch (gravity) {
     case 'static':
+    case 'rotate':
       return newBoard;
 
     case 'down': {

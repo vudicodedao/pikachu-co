@@ -9,6 +9,11 @@ import {
   Flame,
   Clock,
   Trophy,
+  Maximize,
+  Minimize,
+  Settings,
+  Heart,
+  Music,
 } from 'lucide-react';
 import { StageConfig } from '../types/game';
 
@@ -20,13 +25,19 @@ interface GameHeaderProps {
   hintsLeft: number;
   shufflesLeft: number;
   soundEnabled: boolean;
+  bgmEnabled: boolean;
   remainingPairs: number;
   combo: number;
+  isFullscreen: boolean;
   onHint: () => void;
   onShuffle: () => void;
   onToggleSound: () => void;
+  onToggleBgm: () => void;
   onRestart: () => void;
   onOpenPhotos: () => void;
+  onOpenLeaderboard: () => void;
+  onOpenSettings: () => void;
+  onToggleFullscreen: () => void;
 }
 
 export const GameHeader: React.FC<GameHeaderProps> = ({
@@ -37,13 +48,19 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
   hintsLeft,
   shufflesLeft,
   soundEnabled,
+  bgmEnabled,
   remainingPairs,
   combo,
+  isFullscreen,
   onHint,
   onShuffle,
   onToggleSound,
+  onToggleBgm,
   onRestart,
   onOpenPhotos,
+  onOpenLeaderboard,
+  onOpenSettings,
+  onToggleFullscreen,
 }) => {
   const timePercent = Math.max(0, Math.min(100, (timeLeft / totalTime) * 100));
 
@@ -55,18 +72,19 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
 
   return (
     <div className="w-full max-w-[1180px] mx-auto mb-3 space-y-2.5">
-      {/* Thanh trên cùng: Tiêu đề + Thao tác hệ thống */}
+      {/* Thanh trên cùng: Tiêu đề "Em bé iu ❤️" + Thao tác hệ thống */}
       <div className="flex items-center justify-between px-4 py-2 bg-slate-900/80 rounded-xl border border-slate-800 backdrop-blur-sm">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center shadow-lg shadow-amber-500/30">
-            <Sparkles className="w-5 h-5 text-slate-950 stroke-[2.5]" />
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-rose-500 via-pink-400 to-amber-300 flex items-center justify-center shadow-lg shadow-rose-500/30">
+            <Heart className="w-5 h-5 text-slate-950 fill-slate-950" />
           </div>
           <div>
-            <h1 className="text-base font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400 font-arcade">
-              PIKACHU CONNECT
+            <h1 className="text-base font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-rose-400 via-pink-300 to-amber-300 flex items-center gap-2 font-arcade">
+              <span>Em bé iu</span>
+              <span className="text-rose-500 animate-pulse text-sm">❤️</span>
             </h1>
             <p className="text-xs text-slate-400 font-medium flex items-center gap-1.5">
-              <span>{stageConfig.name}</span>
+              <span className="text-rose-300/90">{stageConfig.name}</span>
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-slate-600" />
               <span className="text-amber-400/90">{stageConfig.description}</span>
             </p>
@@ -75,27 +93,73 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
 
         {/* Các nút công cụ */}
         <div className="flex items-center gap-2">
+          {/* Nút Bảng xếp hạng */}
+          <button
+            type="button"
+            onClick={onOpenLeaderboard}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-semibold transition-all cursor-pointer hover:shadow-lg hover:shadow-amber-500/20"
+            title="Xem bảng xếp hạng điểm cao"
+          >
+            <Trophy className="w-4 h-4 text-amber-400" />
+            <span>Kỷ lục</span>
+          </button>
+
           {/* Nút Quản lý ảnh */}
           <button
             type="button"
             onClick={onOpenPhotos}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 text-xs font-semibold transition-all cursor-pointer hover:shadow-lg hover:shadow-rose-500/20"
+            title="Quản lý và nạp 36 ảnh"
           >
             <Images className="w-4 h-4" />
             <span>Nạp ảnh</span>
           </button>
 
-          {/* Nút Âm thanh */}
+          {/* Nút Cài đặt */}
+          <button
+            type="button"
+            onClick={onOpenSettings}
+            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition-colors cursor-pointer"
+            title="Cài đặt thời gian, gợi ý, nhạc nền"
+          >
+            <Settings className="w-4 h-4 text-amber-400" />
+          </button>
+
+          {/* Nút Bật/tắt Nhạc nền */}
+          <button
+            type="button"
+            onClick={onToggleBgm}
+            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition-colors cursor-pointer"
+            title={bgmEnabled ? 'Tắt nhạc nền' : 'Bật nhạc nền'}
+          >
+            <Music className={`w-4 h-4 ${bgmEnabled ? 'text-rose-400' : 'text-slate-500'}`} />
+          </button>
+
+          {/* Nút Âm thanh hiệu ứng */}
           <button
             type="button"
             onClick={onToggleSound}
             className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition-colors cursor-pointer"
-            title={soundEnabled ? 'Tắt âm thanh' : 'Bật âm thanh'}
+            title={soundEnabled ? 'Tắt tiếng hiệu ứng' : 'Bật tiếng hiệu ứng'}
           >
             {soundEnabled ? (
               <Volume2 className="w-4 h-4 text-emerald-400" />
             ) : (
               <VolumeX className="w-4 h-4 text-slate-500" />
+            )}
+          </button>
+
+          {/* Nút Toàn màn hình F11 */}
+          <button
+            type="button"
+            onClick={onToggleFullscreen}
+            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition-colors cursor-pointer"
+            title={isFullscreen ? 'Thu nhỏ màn hình (Thoát F11)' : 'Phóng toàn màn hình (F11)'}
+          >
+            {isFullscreen ? (
+              <Minimize className="w-4 h-4 text-sky-400" />
+            ) : (
+              <Maximize className="w-4 h-4 text-sky-400" />
             )}
           </button>
 
@@ -146,7 +210,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
         </div>
       </div>
 
-      {/* Thanh dưới: Điểm số + Quyền trợ giúp */}
+      {/* Thanh dưới: Điểm số + Màn + Quyền trợ giúp */}
       <div className="grid grid-cols-4 gap-2.5 text-xs">
         {/* Điểm số */}
         <div className="px-3.5 py-2 bg-slate-900/80 rounded-xl border border-slate-800 flex items-center justify-between">
@@ -159,11 +223,11 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
           </span>
         </div>
 
-        {/* Màn chơi */}
+        {/* Màn chơi (hiển thị / 9) */}
         <div className="px-3.5 py-2 bg-slate-900/80 rounded-xl border border-slate-800 flex items-center justify-between">
           <span className="text-slate-400">Màn:</span>
           <span className="font-bold text-sky-400 text-sm">
-            {stageConfig.stage} / 8
+            {stageConfig.stage} / 9
           </span>
         </div>
 
