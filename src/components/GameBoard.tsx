@@ -26,7 +26,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   const gridContainerRef = useRef<HTMLDivElement | null>(null);
 
   return (
-    <div className="relative mx-auto flex items-center justify-center p-3 bg-slate-900/90 rounded-2xl border border-slate-800 shadow-2xl backdrop-blur-md">
+    <div className="relative flex items-center justify-center p-2 sm:p-3 bg-slate-900/90 rounded-2xl border border-slate-800 shadow-2xl backdrop-blur-md max-w-full max-h-full">
       {/* Lớp Canvas vẽ đường laser nối các ô */}
       <ConnectLineCanvas
         path={lastPath}
@@ -35,15 +35,17 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         totalCols={TOTAL_COLS}
       />
 
-      {/* Lưới 11 hàng x 18 cột (bao gồm 1 lớp viền rỗng để vẽ đường đi vòng ra ngoài) */}
+      {/* Lưới 11 hàng x 18 cột tự động co giãn to nhất có thể */}
       <div
         ref={gridContainerRef}
-        className="grid gap-1.5"
+        className="grid gap-1 sm:gap-1.5"
         style={{
           gridTemplateColumns: `repeat(${TOTAL_COLS}, minmax(0, 1fr))`,
           gridTemplateRows: `repeat(${TOTAL_ROWS}, minmax(0, 1fr))`,
-          width: '100%',
-          maxWidth: '1180px',
+          height: 'calc(100vh - 36px)',
+          maxHeight: '920px',
+          width: 'calc((100vh - 36px) * 18 / 11)',
+          maxWidth: 'calc(100vw - 235px)',
           aspectRatio: '18 / 11',
         }}
       >

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Sparkles,
   Shuffle,
@@ -14,6 +14,7 @@ import {
   Settings,
   Heart,
   Music,
+  X,
 } from 'lucide-react';
 import { StageConfig } from '../types/game';
 
@@ -26,6 +27,7 @@ interface GameHeaderProps {
   shufflesLeft: number;
   soundEnabled: boolean;
   bgmEnabled: boolean;
+  bgmVolume: number;
   remainingPairs: number;
   combo: number;
   isFullscreen: boolean;
@@ -33,6 +35,7 @@ interface GameHeaderProps {
   onShuffle: () => void;
   onToggleSound: () => void;
   onToggleBgm: () => void;
+  onChangeBgmVolume: (vol: number) => void;
   onRestart: () => void;
   onOpenPhotos: () => void;
   onOpenLeaderboard: () => void;
@@ -49,6 +52,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
   shufflesLeft,
   soundEnabled,
   bgmEnabled,
+  bgmVolume,
   remainingPairs,
   combo,
   isFullscreen,
@@ -56,12 +60,31 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
   onShuffle,
   onToggleSound,
   onToggleBgm,
+  onChangeBgmVolume,
   onRestart,
   onOpenPhotos,
   onOpenLeaderboard,
   onOpenSettings,
   onToggleFullscreen,
 }) => {
+  const [isAudioMenuOpen, setIsAudioMenuOpen] = useState(false);
+  const audioMenuRef = useRef<HTMLDivElement | null>(null);
+
+  // Đóng popover âm thanh khi click ra ngoài
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (audioMenuRef.current && !audioMenuRef.current.contains(event.target as Node)) {
+        setIsAudioMenuOpen(false);
+      }
+    };
+    if (isAudioMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isAudioMenuOpen]);
+
   const timePercent = Math.max(0, Math.min(100, (timeLeft / totalTime) * 100));
 
   const formatTime = (seconds: number) => {
@@ -72,7 +95,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
 
   return (
     <div className="w-full max-w-[1180px] mx-auto mb-3 space-y-2.5">
-      {/* Thanh trên cùng: Tiêu đề "Em bé iu ❤️" + Thao tác hệ thống */}
+      {/* Thanh trên cùng: Tiêu đề "Phuongkemon ❤️" + Thao tác hệ thống */}
       <div className="flex items-center justify-between px-4 py-2 bg-slate-900/80 rounded-xl border border-slate-800 backdrop-blur-sm">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-rose-500 via-pink-400 to-amber-300 flex items-center justify-center shadow-lg shadow-rose-500/30">
@@ -80,7 +103,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
           </div>
           <div>
             <h1 className="text-base font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-rose-400 via-pink-300 to-amber-300 flex items-center gap-2 font-arcade">
-              <span>Em bé iu</span>
+              <span>Phuongkemon</span>
               <span className="text-rose-500 animate-pulse text-sm">❤️</span>
             </h1>
             <p className="text-xs text-slate-400 font-medium flex items-center gap-1.5">
@@ -120,34 +143,99 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
             type="button"
             onClick={onOpenSettings}
             className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition-colors cursor-pointer"
-            title="Cài đặt thời gian, gợi ý, nhạc nền"
+            title="Cài đặt thời gian, gợi ý, xáo bài"
           >
             <Settings className="w-4 h-4 text-amber-400" />
           </button>
 
-          {/* Nút Bật/tắt Nhạc nền */}
-          <button
-            type="button"
-            onClick={onToggleBgm}
-            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition-colors cursor-pointer"
-            title={bgmEnabled ? 'Tắt nhạc nền' : 'Bật nhạc nền'}
-          >
-            <Music className={`w-4 h-4 ${bgmEnabled ? 'text-rose-400' : 'text-slate-500'}`} />
-          </button>
+          {/* Nút Âm lượng & Nhạc nền kèm Popover sổ ra ngay bên dưới */}
+          <div className="relative" ref={audioMenuRef}>
+            <button
+              type="button"
+              onClick={() => setIsAudioMenuOpen(!isAudioMenuOpen)}
+              className={`p-2 rounded-lg border transition-colors cursor-pointer flex items-center gap-1 ${
+                bgmEnabled
+                  ? 'bg-rose-500/20 hover:bg-rose-500/30 border-rose-500/40 text-rose-300 shadow-sm'
+                  : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-400'
+              }`}
+              title="Click để chỉnh âm lượng nhạc nền & hiệu ứng"
+            >
+              <Music className="w-4 h-4" />
+              <span className="text-[10px] font-bold">
+                {bgmEnabled ? `${Math.round(bgmVolume * 100)}%` : 'Tắt'}
+              </span>
+            </button>
 
-          {/* Nút Âm thanh hiệu ứng */}
-          <button
-            type="button"
-            onClick={onToggleSound}
-            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition-colors cursor-pointer"
-            title={soundEnabled ? 'Tắt tiếng hiệu ứng' : 'Bật tiếng hiệu ứng'}
-          >
-            {soundEnabled ? (
-              <Volume2 className="w-4 h-4 text-emerald-400" />
-            ) : (
-              <VolumeX className="w-4 h-4 text-slate-500" />
+            {/* Popover chỉnh âm thanh ngay dưới nút, không che màn chơi */}
+            {isAudioMenuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-64 p-3.5 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl backdrop-blur-md z-50 animate-fadeIn space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-800 text-xs font-bold text-white">
+                  <span className="flex items-center gap-1.5">
+                    <Music className="w-3.5 h-3.5 text-rose-400" />
+                    Chỉnh âm lượng
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsAudioMenuOpen(false)}
+                    className="text-slate-400 hover:text-white p-0.5 rounded cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {/* Nhạc nền (BGM) */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px] text-slate-300">
+                    <button
+                      type="button"
+                      onClick={onToggleBgm}
+                      className="flex items-center gap-1.5 hover:text-rose-300 cursor-pointer font-medium"
+                    >
+                      <span className={`w-2 h-2 rounded-full ${bgmEnabled ? 'bg-rose-400 animate-pulse' : 'bg-slate-600'}`} />
+                      <span>Nhạc nền ({bgmEnabled ? 'Bật' : 'Tắt'})</span>
+                    </button>
+                    <span className="font-extrabold text-rose-300 text-xs">
+                      {bgmEnabled ? `${Math.round(bgmVolume * 100)}%` : 'Đã tắt'}
+                    </span>
+                  </div>
+                  {bgmEnabled && (
+                    <input
+                      type="range"
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      value={bgmVolume}
+                      onChange={(e) => onChangeBgmVolume(Number(e.target.value))}
+                      className="w-full accent-rose-400 cursor-pointer h-1.5 bg-slate-800 rounded-lg"
+                    />
+                  )}
+                </div>
+
+                {/* Âm thanh hiệu ứng (SFX) */}
+                <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 text-[11px] text-slate-300">
+                  <span className="flex items-center gap-1.5">
+                    {soundEnabled ? (
+                      <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
+                    ) : (
+                      <VolumeX className="w-3.5 h-3.5 text-slate-500" />
+                    )}
+                    <span>Tiếng hiệu ứng</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={onToggleSound}
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-colors ${
+                      soundEnabled
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                        : 'bg-slate-800 text-slate-500 border border-slate-700'
+                    }`}
+                  >
+                    {soundEnabled ? 'Bật' : 'Tắt'}
+                  </button>
+                </div>
+              </div>
             )}
-          </button>
+          </div>
 
           {/* Nút Toàn màn hình F11 */}
           <button

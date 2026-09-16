@@ -13,7 +13,7 @@ import { bgm } from './core/bgm';
 import { getAllCustomPhotos } from './utils/photoStorage';
 import { loadSettings, saveSettings } from './utils/settings';
 import { getLeaderboard, saveLeaderboardEntry, clearLeaderboard } from './utils/leaderboard';
-import { GameHeader } from './components/GameHeader';
+import { GameSidebar } from './components/GameSidebar';
 import { GameBoard } from './components/GameBoard';
 import { PhotoManagerModal } from './components/PhotoManagerModal';
 import { SettingsModal } from './components/SettingsModal';
@@ -41,6 +41,11 @@ export const App: React.FC = () => {
   const [combo, setCombo] = useState(0);
   const [status, setStatus] = useState<GameStatus>('playing');
   const [timeBonus, setTimeBonus] = useState(0);
+
+  // Snapshot trạng thái đầu mỗi màn để khi "Thử lại màn này", hệ thống hoàn nguyên chính xác
+  const [stageStartScore, setStageStartScore] = useState(0);
+  const [stageStartHints, setStageStartHints] = useState(settings.hintsCount);
+  const [stageStartShuffles, setStageStartShuffles] = useState(settings.shufflesCount);
 
   // Nhạc nền & Âm thanh
   const [soundEnabled, setSoundEnabled] = useState(settings.sfxEnabled);
@@ -141,7 +146,7 @@ export const App: React.FC = () => {
     }
   };
 
-  // Cập nhật cài đặt
+  // Cập nhật cài đặt -> Bắt đầu lại ván mới từ Màn 1 với điểm số 0 theo yêu cầu
   const handleSaveSettings = (newSettings: GameSettings) => {
     setSettings(newSettings);
     saveSettings(newSettings);
@@ -155,10 +160,23 @@ export const App: React.FC = () => {
     setSoundEnabled(newSettings.sfxEnabled);
     sound.enabled = newSettings.sfxEnabled;
 
-    // Cập nhật lượt trợ giúp và thời gian cho ván
+    // Reset toàn bộ hệ thống về ván mới từ Màn 1
+    sessionStartTimeRef.current = Date.now();
+    setScore(0);
+    setStageStartScore(0);
     setHintsLeft(newSettings.hintsCount);
+    setStageStartHints(newSettings.hintsCount);
     setShufflesLeft(newSettings.shufflesCount);
-    setTimeLeft(newSettings.stageTimeSeconds);
+    setStageStartShuffles(newSettings.shufflesCount);
+    startStage(0, newSettings);
+  };
+
+  // Chỉnh âm lượng BGM từ popover header
+  const handleChangeBgmVolume = (vol: number) => {
+    bgm.setVolume(vol);
+    const updated = { ...settings, bgmVolume: vol };
+    setSettings(updated);
+    saveSettings(updated);
   };
 
   // Bật/tắt nhạc nền nhanh
@@ -306,21 +324,36 @@ export const App: React.FC = () => {
     setBoard(nextBoard);
   };
 
-  // Sang màn kế tiếp
+  // Chơi lại màn hiện tại: Hoàn nguyên toàn bộ hệ thống (điểm, gợi ý, xáo, thời gian) về đầu màn
+  const handleRetryStage = () => {
+    setScore(stageStartScore);
+    setHintsLeft(stageStartHints);
+    setShufflesLeft(stageStartShuffles);
+    startStage(stageIndex);
+  };
+
+  // Sang màn kế tiếp: Lưu snapshot trước khi bắt đầu màn mới
   const handleNextStage = () => {
     if (stageIndex < STAGE_CONFIGS.length - 1) {
-      startStage(stageIndex + 1);
+      const nextIdx = stageIndex + 1;
+      setStageStartScore(score);
+      setStageStartHints(hintsLeft);
+      setStageStartShuffles(shufflesLeft);
+      startStage(nextIdx);
     } else {
       setStatus('victory');
     }
   };
 
-  // Chơi lại từ đầu
+  // Chơi lại từ đầu Màn 1: Reset toàn bộ điểm và các thông số
   const handleRestartFromBeginning = () => {
     sessionStartTimeRef.current = Date.now();
     setScore(0);
+    setStageStartScore(0);
     setHintsLeft(settings.hintsCount);
+    setStageStartHints(settings.hintsCount);
     setShufflesLeft(settings.shufflesCount);
+    setStageStartShuffles(settings.shufflesCount);
     startStage(0);
   };
 
@@ -328,9 +361,9 @@ export const App: React.FC = () => {
   const remainingPairs = Math.floor(remainingTiles / 2);
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-3 antialiased">
-      {/* Thanh điều khiển trên cùng */}
-      <GameHeader
+    <main className="h-screen w-screen bg-slate-950 text-slate-100 flex flex-row overflow-hidden select-none">
+      {/* Cột Sidebar bên trái thu gọn 210px */}
+      <GameSidebar
         stageConfig={stageConfig}
         score={score}
         timeLeft={timeLeft}
@@ -339,6 +372,7 @@ export const App: React.FC = () => {
         shufflesLeft={shufflesLeft}
         soundEnabled={soundEnabled}
         bgmEnabled={bgmEnabled}
+        bgmVolume={settings.bgmVolume}
         remainingPairs={remainingPairs}
         combo={combo}
         isFullscreen={isFullscreen}
@@ -346,53 +380,26 @@ export const App: React.FC = () => {
         onShuffle={handleShuffle}
         onToggleSound={handleToggleSound}
         onToggleBgm={handleToggleBgm}
-        onRestart={() => startStage(stageIndex)}
+        onChangeBgmVolume={handleChangeBgmVolume}
+        onRestart={handleRetryStage}
         onOpenPhotos={() => setIsPhotoModalOpen(true)}
         onOpenLeaderboard={() => setIsLeaderboardOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onToggleFullscreen={handleToggleFullscreen}
       />
 
-      {/* Bàn cờ chính */}
-      <GameBoard
-        board={board}
-        selectedTile={selectedTile}
-        hintPair={hintPair}
-        lastPath={lastPath}
-        customPhotos={customPhotos}
-        rotations={rotations}
-        onTileClick={handleTileClick}
-      />
-
-      {/* Chân trang / Ghi chú */}
-      <footer className="w-full max-w-[1180px] mt-2.5 flex items-center justify-between text-[11px] text-slate-500 px-2 font-medium">
-        <span className="flex items-center gap-1.5">
-          <span>Em bé iu ❤️</span>
-          <span>&bull;</span>
-          <span>Desktop Edition</span>
-          <span>&bull;</span>
-          <span>9 Màn chơi thử thách</span>
-        </span>
-        <span className="flex items-center gap-2">
-          <span>Kích thước lưới: 144 ô</span>
-          <span>&bull;</span>
-          <button
-            type="button"
-            onClick={() => setIsSettingsOpen(true)}
-            className="text-amber-400 hover:underline cursor-pointer"
-          >
-            Cài đặt (10 phút)
-          </button>
-          <span>&bull;</span>
-          <button
-            type="button"
-            onClick={() => setIsLeaderboardOpen(true)}
-            className="text-amber-400 hover:underline cursor-pointer"
-          >
-            Bảng xếp hạng
-          </button>
-        </span>
-      </footer>
+      {/* Khu vực Bàn cờ bên phải mở rộng tối đa theo toàn bộ chiều cao màn hình */}
+      <div className="flex-1 h-screen flex items-center justify-center p-2 sm:p-3 overflow-hidden relative">
+        <GameBoard
+          board={board}
+          selectedTile={selectedTile}
+          hintPair={hintPair}
+          lastPath={lastPath}
+          customPhotos={customPhotos}
+          rotations={rotations}
+          onTileClick={handleTileClick}
+        />
+      </div>
 
       {/* Modal nạp & quản lý ảnh */}
       <PhotoManagerModal
@@ -439,7 +446,7 @@ export const App: React.FC = () => {
         isOpen={status === 'game_over'}
         stageConfig={stageConfig}
         score={score}
-        onRetryStage={() => startStage(stageIndex)}
+        onRetryStage={handleRetryStage}
         onRestartFromBeginning={handleRestartFromBeginning}
       />
     </main>

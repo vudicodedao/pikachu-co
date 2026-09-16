@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, X, Music, Volume2, Clock, Sparkles, Shuffle, VolumeX } from 'lucide-react';
+import { Settings, X, Clock, Sparkles, Shuffle, AlertTriangle } from 'lucide-react';
 import { GameSettings } from '../types/game';
 
 interface SettingsModalProps {
@@ -37,7 +37,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
             <div>
               <h2 className="text-base font-bold text-white">Cài đặt trò chơi</h2>
-              <p className="text-xs text-slate-400">Tùy biến thời gian, quyền trợ giúp và âm thanh</p>
+              <p className="text-xs text-slate-400">Tùy biến thời gian màn chơi và quyền trợ giúp</p>
             </div>
           </div>
           <button
@@ -50,7 +50,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
 
         {/* Nội dung cài đặt */}
-        <div className="p-6 space-y-5 text-xs">
+        <div className="p-6 space-y-4 text-xs">
+          {/* Cảnh báo reset màn khi lưu */}
+          <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+            <span>
+              <strong>Lưu ý:</strong> Khi bạn lưu thay đổi cài đặt mới (thời gian, gợi ý, số lần xáo), trò chơi sẽ tự động bắt đầu lại từ Màn 1 với điểm số 0 để áp dụng thông số mới.
+            </span>
+          </div>
+
           {/* 1. Thời gian mỗi màn */}
           <div className="p-3.5 bg-slate-950/60 rounded-xl border border-slate-800 space-y-2">
             <div className="flex items-center justify-between">
@@ -125,47 +133,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <span>Tối đa: 20</span>
             </div>
           </div>
-
-          {/* 4. Nhạc nền (BGM) */}
-          <div className="p-3.5 bg-slate-950/60 rounded-xl border border-slate-800 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-slate-200 font-semibold">
-                <Music className="w-4 h-4 text-rose-400" />
-                <span>Nhạc nền (I could get used to days like this):</span>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.bgmEnabled}
-                  onChange={(e) => setForm({ ...form, bgmEnabled: e.target.checked })}
-                  className="sr-only peer"
-                />
-                <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-500"></div>
-              </label>
-            </div>
-
-            {/* Thanh âm lượng nhạc nền */}
-            {form.bgmEnabled && (
-              <div className="space-y-1.5 pt-1 border-t border-slate-800/80">
-                <div className="flex justify-between text-[11px] text-slate-400">
-                  <span className="flex items-center gap-1">
-                    {form.bgmVolume === 0 ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-                    Âm lượng nhạc nền
-                  </span>
-                  <span className="font-bold text-rose-300">{Math.round(form.bgmVolume * 100)}%</span>
-                </div>
-                <input
-                  type="range"
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  value={form.bgmVolume}
-                  onChange={(e) => setForm({ ...form, bgmVolume: Number(e.target.value) })}
-                  className="w-full accent-rose-400 cursor-pointer"
-                />
-              </div>
-            )}
-          </div>
         </div>
 
         {/* Footer */}
@@ -182,7 +149,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             onClick={handleSave}
             className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition-all cursor-pointer shadow-lg shadow-amber-500/20"
           >
-            Lưu & Áp dụng
+            Lưu & Bắt đầu lại
           </button>
         </div>
       </div>
