@@ -20,8 +20,15 @@ import { SettingsModal } from './components/SettingsModal';
 import { LeaderboardModal } from './components/LeaderboardModal';
 import { StageClearModal } from './components/StageClearModal';
 import { GameOverModal } from './components/GameOverModal';
+import { FlappyGame } from './components/FlappyGame';
+import { GameLobby } from './components/GameLobby';
+import { MemoryGame } from './components/MemoryGame';
+import { CatcherGame } from './components/CatcherGame';
 
 export const App: React.FC = () => {
+  // Chế độ màn hình: 'lobby' (Sảnh chọn game), 'pikachu', 'flappy', 'memory', 'catcher'
+  const [activeView, setActiveView] = useState<'lobby' | 'pikachu' | 'flappy' | 'memory' | 'catcher'>('lobby');
+
   // Cài đặt game
   const [settings, setSettings] = useState<GameSettings>(() => loadSettings());
 
@@ -71,7 +78,8 @@ export const App: React.FC = () => {
     });
 
     bgm.volume = settings.bgmVolume;
-    bgm.setEnabled(settings.bgmEnabled);
+    // Mặc định ở sảnh chính không phát nhạc nền để tránh ồn
+    bgm.setEnabled(false);
 
     // Lắng nghe sự kiện F11 / Fullscreen thay đổi
     const onFullscreenChange = () => {
@@ -357,12 +365,73 @@ export const App: React.FC = () => {
     startStage(0);
   };
 
+  // Vào game Pikachu: bật lại nhạc nền nếu người dùng đã bật trong settings
+  const handleEnterPikachu = () => {
+    setActiveView('pikachu');
+    if (settings.bgmEnabled && bgmEnabled) {
+      bgm.setEnabled(true);
+    }
+  };
+
+  // Vào game Flappy Bird: ngắt nhạc nền Pikachu hoàn toàn
+  const handleEnterFlappy = () => {
+    bgm.setEnabled(false);
+    setActiveView('flappy');
+  };
+
+  // Vào game Phuong Memory (Lật bài): ngắt nhạc nền Pikachu hoàn toàn
+  const handleEnterMemory = () => {
+    bgm.setEnabled(false);
+    setActiveView('memory');
+  };
+
+  // Vào game Phuong Catcher (Siêu nhân hứng bạn gái): ngắt nhạc nền Pikachu
+  const handleEnterCatcher = () => {
+    bgm.setEnabled(false);
+    setActiveView('catcher');
+  };
+
+  // Quay về Sảnh chính (Lobby): tắt toàn bộ âm thanh
+  const handleBackToLobby = () => {
+    bgm.setEnabled(false);
+    setActiveView('lobby');
+  };
+
+  // 1. MÀN HÌNH SẢNH CHỌN GAME (LOBBY)
+  if (activeView === 'lobby') {
+    return (
+      <GameLobby
+        onSelectPikachu={handleEnterPikachu}
+        onSelectFlappy={handleEnterFlappy}
+        onSelectMemory={handleEnterMemory}
+        onSelectCatcher={handleEnterCatcher}
+        pikachuBestScore={leaderboard[0]?.score || 0}
+      />
+    );
+  }
+
+  // 2. GAME FLAPPY BIRD
+  if (activeView === 'flappy') {
+    return <FlappyGame onBackToLobby={handleBackToLobby} />;
+  }
+
+  // 3. GAME PHUONG MEMORY (LẬT BÀI 8 MÀN 10 PHÚT)
+  if (activeView === 'memory') {
+    return <MemoryGame onBackToLobby={handleBackToLobby} />;
+  }
+
+  // 4. GAME PHUONG CATCHER (SIÊU NHÂN HỨNG BẠN GÁI & TIM)
+  if (activeView === 'catcher') {
+    return <CatcherGame onBackToLobby={handleBackToLobby} />;
+  }
+
+  // 3. GAME PIKACHU
   const remainingTiles = countRemainingTiles(board);
   const remainingPairs = Math.floor(remainingTiles / 2);
 
   return (
     <main className="h-screen w-screen bg-slate-950 text-slate-100 flex flex-row overflow-hidden select-none">
-      {/* Cột Sidebar bên trái thu gọn 210px */}
+      {/* Cột Sidebar bên trái thu gọn */}
       <GameSidebar
         stageConfig={stageConfig}
         score={score}
@@ -386,6 +455,7 @@ export const App: React.FC = () => {
         onOpenLeaderboard={() => setIsLeaderboardOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onToggleFullscreen={handleToggleFullscreen}
+        onBackToLobby={handleBackToLobby}
       />
 
       {/* Khu vực Bàn cờ bên phải mở rộng tối đa theo toàn bộ chiều cao màn hình */}

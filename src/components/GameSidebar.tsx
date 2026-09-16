@@ -15,6 +15,8 @@ import {
   Heart,
   Music,
   Sliders,
+  Bird,
+  Home,
 } from 'lucide-react';
 import { StageConfig } from '../types/game';
 
@@ -41,6 +43,7 @@ interface GameSidebarProps {
   onOpenLeaderboard: () => void;
   onOpenSettings: () => void;
   onToggleFullscreen: () => void;
+  onBackToLobby: () => void;
 }
 
 export const GameSidebar: React.FC<GameSidebarProps> = ({
@@ -66,6 +69,7 @@ export const GameSidebar: React.FC<GameSidebarProps> = ({
   onOpenLeaderboard,
   onOpenSettings,
   onToggleFullscreen,
+  onBackToLobby,
 }) => {
   const [showVolumePop, setShowVolumePop] = useState(false);
   const [popPos, setPopPos] = useState<{ top: number; left: number } | null>(null);
@@ -331,7 +335,19 @@ export const GameSidebar: React.FC<GameSidebarProps> = ({
         </button>
       </div>
 
-      {/* 13. Nút Toàn màn hình F11 (hàng riêng, nút vuông) */}
+      {/* 13. Nút Về Menu chính (hàng riêng, nút vuông) */}
+      <div className="w-full flex justify-center">
+        <button
+          type="button"
+          onClick={onBackToLobby}
+          title="Về Menu chính (Đổi game)"
+          className="w-10 h-10 rounded-xl bg-gradient-to-tr from-rose-500/25 to-pink-500/25 hover:from-rose-500/40 hover:to-pink-500/40 border border-rose-400/40 text-rose-300 flex items-center justify-center cursor-pointer transition-colors shadow-sm"
+        >
+          <Home className="w-5 h-5 text-rose-300" />
+        </button>
+      </div>
+
+      {/* 14. Nút Toàn màn hình F11 (hàng riêng, nút vuông) */}
       <div className="w-full flex justify-center">
         <button
           type="button"
@@ -343,7 +359,7 @@ export const GameSidebar: React.FC<GameSidebarProps> = ({
         </button>
       </div>
 
-      {/* 14. Nút Chơi lại màn này (hàng riêng, nút vuông) */}
+      {/* 15. Nút Chơi lại màn này (hàng riêng, nút vuông) */}
       <div className="w-full flex justify-center">
         <button
           type="button"

@@ -81,8 +81,8 @@ export async function clearAllCustomPhotos(): Promise<void> {
   });
 }
 
-// Pipeline xử lý ảnh: Cắt vuông tâm (Center-Crop) và nén chuẩn về 120x120px bằng HTML5 Canvas
-export function cropAndResizeImage(file: File, targetSize = 120): Promise<string> {
+// Pipeline xử lý ảnh: Cắt vuông tâm (Center-Crop) và nén chuẩn về độ nét cao (HD 360x360px) bằng HTML5 Canvas
+export function cropAndResizeImage(file: File, targetSize = 360): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {

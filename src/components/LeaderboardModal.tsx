@@ -7,6 +7,11 @@ interface LeaderboardModalProps {
   entries: LeaderboardEntry[];
   onClose: () => void;
   onClear: () => void;
+  title?: string;
+  subtitle?: string;
+  scoreColumnLabel?: string;
+  stageColumnLabel?: string;
+  stageBadgePrefix?: string;
 }
 
 export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
@@ -14,6 +19,11 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
   entries,
   onClose,
   onClear,
+  title = 'Bảng xếp hạng kỷ lục',
+  subtitle = 'Lịch sử thành tích cao nhất của Em bé iu',
+  scoreColumnLabel = 'Điểm số',
+  stageColumnLabel = 'Màn đạt được',
+  stageBadgePrefix = 'Màn',
 }) => {
   if (!isOpen) return null;
 
@@ -34,12 +44,12 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
             </div>
             <div>
               <h2 className="text-base font-bold text-white flex items-center gap-2">
-                <span>Bảng xếp hạng kỷ lục</span>
+                <span>{title}</span>
                 <span className="text-xs px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 font-normal">
                   Tối đa 20 lượt chơi
                 </span>
               </h2>
-              <p className="text-xs text-slate-400">Lịch sử điểm số cao nhất của Em bé iu</p>
+              <p className="text-xs text-slate-400">{subtitle}</p>
             </div>
           </div>
           <button
@@ -65,8 +75,8 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
                 <thead>
                   <tr className="border-b border-slate-800 bg-slate-900/80 text-slate-400 font-semibold">
                     <th className="py-3 px-4 w-16 text-center">Hạng</th>
-                    <th className="py-3 px-4">Điểm số</th>
-                    <th className="py-3 px-4">Màn đạt được</th>
+                    <th className="py-3 px-4">{scoreColumnLabel}</th>
+                    <th className="py-3 px-4">{stageColumnLabel}</th>
                     <th className="py-3 px-4">Thời gian</th>
                     <th className="py-3 px-4 text-right">Ngày giờ</th>
                   </tr>
@@ -114,20 +124,20 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
                         </td>
                         <td className="py-3 px-4">
                           <span className="px-2 py-0.5 rounded bg-sky-500/15 border border-sky-500/30 text-sky-300 font-semibold">
-                            Màn {item.stageReached} / 9
+                            {stageBadgePrefix} {item.stageReached}
                           </span>
                         </td>
                         <td className="py-3 px-4 text-slate-400">
-                          <span className="flex items-center gap-1">
+                          <div className="flex items-center gap-1.5">
                             <Clock className="w-3.5 h-3.5 text-slate-500" />
-                            {formatDuration(item.timeSpentSeconds)}
-                          </span>
+                            <span>{formatDuration(item.timeSpentSeconds)}</span>
+                          </div>
                         </td>
-                        <td className="py-3 px-4 text-right text-slate-500">
-                          <span className="flex items-center justify-end gap-1">
-                            <Calendar className="w-3 h-3 text-slate-600" />
-                            {item.date}
-                          </span>
+                        <td className="py-3 px-4 text-right text-slate-400">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                            <span>{item.date}</span>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -138,28 +148,22 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
           )}
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-3.5 border-t border-slate-800 bg-slate-950/60">
-          <div>
-            {entries.length > 0 && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (window.confirm('Bạn có chắc muốn xóa sạch lịch sử bảng xếp hạng?')) {
-                    onClear();
-                  }
-                }}
-                className="flex items-center gap-1.5 text-xs text-rose-400 hover:text-rose-300 cursor-pointer"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Xóa bảng xếp hạng</span>
-              </button>
-            )}
-          </div>
+        {/* Footer actions */}
+        <div className="flex items-center justify-between px-6 py-3 border-t border-slate-800 bg-slate-950/60 text-xs">
+          <button
+            type="button"
+            onClick={onClear}
+            disabled={entries.length === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-rose-400 hover:bg-rose-500/10 disabled:opacity-40 disabled:hover:bg-transparent transition-colors cursor-pointer disabled:cursor-not-allowed"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span>Xóa lịch sử</span>
+          </button>
+
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs cursor-pointer shadow-lg shadow-amber-500/20"
+            className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium transition-colors cursor-pointer"
           >
             Đóng
           </button>

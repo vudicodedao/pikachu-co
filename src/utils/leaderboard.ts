@@ -1,11 +1,14 @@
 import { LeaderboardEntry } from '../types/game';
 
-const LEADERBOARD_STORAGE_KEY = 'pikachu_couple_leaderboard';
+export const PIKACHU_LEADERBOARD_KEY = 'pikachu_couple_leaderboard';
+export const MEMORY_LEADERBOARD_KEY = 'memory_couple_leaderboard';
+export const CATCHER_LEADERBOARD_KEY = 'catcher_couple_leaderboard';
+
 const MAX_LEADERBOARD_ENTRIES = 20;
 
-export function getLeaderboard(): LeaderboardEntry[] {
+export function getLeaderboard(storageKey = PIKACHU_LEADERBOARD_KEY): LeaderboardEntry[] {
   try {
-    const raw = localStorage.getItem(LEADERBOARD_STORAGE_KEY);
+    const raw = localStorage.getItem(storageKey);
     if (!raw) return [];
     const list = JSON.parse(raw) as LeaderboardEntry[];
     return Array.isArray(list) ? list : [];
@@ -14,9 +17,12 @@ export function getLeaderboard(): LeaderboardEntry[] {
   }
 }
 
-export function saveLeaderboardEntry(entry: Omit<LeaderboardEntry, 'id' | 'date'>): LeaderboardEntry[] {
+export function saveLeaderboardEntry(
+  entry: Omit<LeaderboardEntry, 'id' | 'date'>,
+  storageKey = PIKACHU_LEADERBOARD_KEY
+): LeaderboardEntry[] {
   try {
-    const current = getLeaderboard();
+    const current = getLeaderboard(storageKey);
     const newEntry: LeaderboardEntry = {
       ...entry,
       id: `${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -33,16 +39,16 @@ export function saveLeaderboardEntry(entry: Omit<LeaderboardEntry, 'id' | 'date'
       .sort((a, b) => b.score - a.score || b.stageReached - a.stageReached)
       .slice(0, MAX_LEADERBOARD_ENTRIES);
 
-    localStorage.setItem(LEADERBOARD_STORAGE_KEY, JSON.stringify(updated));
+    localStorage.setItem(storageKey, JSON.stringify(updated));
     return updated;
   } catch {
     return [];
   }
 }
 
-export function clearLeaderboard(): void {
+export function clearLeaderboard(storageKey = PIKACHU_LEADERBOARD_KEY): void {
   try {
-    localStorage.removeItem(LEADERBOARD_STORAGE_KEY);
+    localStorage.removeItem(storageKey);
   } catch {
     // ignore
   }
