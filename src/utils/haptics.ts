@@ -44,6 +44,28 @@ export const haptics = {
     }
   },
 
+  // Rung vừa khi nhặt vật phẩm đặc biệt (30ms)
+  medium: () => {
+    try {
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        navigator.vibrate(30);
+      }
+    } catch {
+      // ignore
+    }
+  },
+
+  // Rung mạnh kích hoạt chong chóng tre / phản lực (50ms)
+  heavy: () => {
+    try {
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        navigator.vibrate([40, 30, 40]);
+      }
+    } catch {
+      // ignore
+    }
+  },
+
   // Rung mạnh khi Game Over
   gameOver: () => {
     try {

@@ -3,6 +3,7 @@ import { LeaderboardEntry } from '../types/game';
 export const PIKACHU_LEADERBOARD_KEY = 'pikachu_couple_leaderboard';
 export const MEMORY_LEADERBOARD_KEY = 'memory_couple_leaderboard';
 export const CATCHER_LEADERBOARD_KEY = 'catcher_couple_leaderboard';
+export const DORAJUMP_LEADERBOARD_KEY = 'dorajump_couple_leaderboard';
 
 const MAX_LEADERBOARD_ENTRIES = 20;
 

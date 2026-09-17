@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Play, Trophy, Sparkles, Heart, Maximize, Minimize, Flame, Zap, Lock } from 'lucide-react';
 import { BirdAvatar } from './BirdAvatar';
 import { SuperheroAvatar } from './SuperheroAvatar';
+import { DoraemonAvatar } from './DoraemonAvatar';
 import { haptics } from '../utils/haptics';
 
 interface GameLobbyProps {
@@ -9,6 +10,7 @@ interface GameLobbyProps {
   onSelectFlappy: () => void;
   onSelectMemory: () => void;
   onSelectCatcher: () => void;
+  onSelectDoraJump: () => void;
   onLock?: () => void;
   pikachuBestScore?: number;
 }
@@ -18,12 +20,14 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
   onSelectFlappy,
   onSelectMemory,
   onSelectCatcher,
+  onSelectDoraJump,
   onLock,
   pikachuBestScore = 0,
 }) => {
   const [flappyBest, setFlappyBest] = useState(0);
   const [memoryBest, setMemoryBest] = useState(0);
   const [catcherBest, setCatcherBest] = useState(0);
+  const [doraJumpBest, setDoraJumpBest] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
@@ -35,6 +39,9 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
 
     const savedCatcher = Number(localStorage.getItem('phuong_catcher_best') || 0);
     setCatcherBest(savedCatcher);
+
+    const savedDora = Number(localStorage.getItem('phuong_dorajump_best') || 0);
+    setDoraJumpBest(savedDora);
 
     const onFullscreenChange = () => {
       setIsFullscreen(Boolean(document.fullscreenElement));
@@ -103,8 +110,8 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
         </div>
       </div>
 
-      {/* DANH SÁCH 4 GAME RIÊNG BIỆT (4 GAME CARDS) */}
-      <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 w-full max-w-7xl my-auto py-3">
+      {/* DANH SÁCH 5 GAME RIÊNG BIỆT (5 GAME CARDS) */}
+      <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5 sm:gap-4 w-full max-w-[1460px] my-auto py-3">
         {/* GAME 1: PHUONGKEMON (PIKACHU) */}
         <div className="group relative rounded-3xl bg-gradient-to-b from-slate-900/95 to-slate-950/95 border-2 border-slate-800 hover:border-rose-500/60 p-5 shadow-2xl transition-all duration-300 hover:-translate-y-1.5 flex flex-col justify-between overflow-hidden">
           <div className="absolute top-0 right-0 w-28 h-28 bg-rose-500/10 rounded-full blur-2xl group-hover:bg-rose-500/20 transition-all pointer-events-none" />
@@ -122,31 +129,31 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
             </div>
 
             <div className="flex items-center gap-3.5 mb-2.5">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-rose-500 to-pink-400 flex items-center justify-center shadow-lg shadow-rose-500/30 shrink-0">
-                <Heart className="w-7 h-7 text-slate-950 fill-slate-950" />
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-rose-500 to-pink-500 flex items-center justify-center shadow-lg shadow-rose-500/30 shrink-0 p-1">
+                <BirdAvatar size={48} animate={false} />
               </div>
               <div>
                 <h2 className="text-lg font-black font-arcade text-rose-300 group-hover:text-rose-200 transition-colors">
                   Phuongkemon
                 </h2>
                 <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">
-                  Nối các cặp ảnh kỷ niệm qua 9 màn biến đổi trọng lực.
+                  Pikachu 8 hướng dịch chuyển, 9 màn chơi thử thách kết đôi ảnh bạn gái!
                 </p>
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-1.5 py-2.5 px-3 rounded-2xl bg-slate-950/80 border border-slate-800/80 text-center my-2 text-xs">
               <div>
-                <div className="text-[9px] text-slate-500 font-bold uppercase">Độ dài</div>
+                <div className="text-[9px] text-slate-500 font-bold uppercase">Màn chơi</div>
                 <div className="font-extrabold text-amber-300 text-[11px]">9 Màn</div>
               </div>
               <div className="border-x border-slate-800">
                 <div className="text-[9px] text-slate-500 font-bold uppercase">Thời gian</div>
-                <div className="font-extrabold text-pink-300 text-[11px]">10 Phút</div>
+                <div className="font-extrabold text-rose-400 text-[11px]">10 Phút</div>
               </div>
               <div>
-                <div className="text-[9px] text-slate-500 font-bold uppercase">Ảnh nạp</div>
-                <div className="font-extrabold text-emerald-400 text-[11px]">36 Ảnh</div>
+                <div className="text-[9px] text-slate-500 font-bold uppercase">Bộ ảnh</div>
+                <div className="font-extrabold text-pink-400 text-[11px]">36 Ảnh</div>
               </div>
             </div>
           </div>
@@ -157,22 +164,22 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
               haptics.tap();
               onSelectPikachu();
             }}
-            className="w-full mt-3 py-3 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-400 hover:to-pink-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-rose-500/30 transition-all cursor-pointer group-hover:scale-[1.02] active:scale-95"
+            className="w-full mt-3 py-3 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-400 hover:to-pink-400 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-rose-500/30 transition-all cursor-pointer group-hover:scale-[1.02] active:scale-95"
           >
-            <Play className="w-3.5 h-3.5 fill-slate-950" />
+            <Play className="w-3.5 h-3.5 fill-white" />
             <span>CHƠI PIKACHU NGAY</span>
           </button>
         </div>
 
-        {/* GAME 2: FLAPPY PHUONG (FLAPPY BIRD) */}
-        <div className="group relative rounded-3xl bg-gradient-to-b from-slate-900/95 to-slate-950/95 border-2 border-slate-800 hover:border-amber-400/60 p-5 shadow-2xl transition-all duration-300 hover:-translate-y-1.5 flex flex-col justify-between overflow-hidden">
-          <div className="absolute top-0 right-0 w-28 h-28 bg-amber-400/10 rounded-full blur-2xl group-hover:bg-amber-400/20 transition-all pointer-events-none" />
+        {/* GAME 2: FLAPPY PHUONG (CHÚ CHIM VƯỢT ỐNG) */}
+        <div className="group relative rounded-3xl bg-gradient-to-b from-slate-900/95 to-slate-950/95 border-2 border-slate-800 hover:border-amber-500/60 p-5 shadow-2xl transition-all duration-300 hover:-translate-y-1.5 flex flex-col justify-between overflow-hidden">
+          <div className="absolute top-0 right-0 w-28 h-28 bg-amber-500/10 rounded-full blur-2xl group-hover:bg-amber-500/20 transition-all pointer-events-none" />
 
           <div>
             <div className="flex items-center justify-between mb-3">
-              <span className="px-2.5 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-300 text-[10px] font-extrabold flex items-center gap-1">
-                <Zap className="w-3 h-3" />
-                <span>Bay Né Cọc</span>
+              <span className="px-2.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-extrabold flex items-center gap-1">
+                <Sparkles className="w-3 h-3" />
+                <span>Bay Lượn</span>
               </span>
               <span className="text-[11px] font-bold text-amber-300 flex items-center gap-1">
                 <Trophy className="w-3 h-3 text-yellow-400" />
@@ -181,7 +188,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
             </div>
 
             <div className="flex items-center gap-3.5 mb-2.5">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-400 to-yellow-300 flex items-center justify-center shadow-lg shadow-amber-400/30 shrink-0 p-1">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-400 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/30 shrink-0 p-1">
                 <BirdAvatar size={48} animate={false} />
               </div>
               <div>
@@ -189,23 +196,23 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
                   Flappy Phuong
                 </h2>
                 <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">
-                  Giữ nhịp bay né ống nước với đầu phồng má ngộ nghĩnh!
+                  Chú chim mặt phồng má đáng yêu vượt chướng ngại vật ống cống retro!
                 </p>
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-1.5 py-2.5 px-3 rounded-2xl bg-slate-950/80 border border-slate-800/80 text-center my-2 text-xs">
               <div>
-                <div className="text-[9px] text-slate-500 font-bold uppercase">Cách chơi</div>
-                <div className="font-extrabold text-sky-300 text-[11px]">Né Cọc</div>
+                <div className="text-[9px] text-slate-500 font-bold uppercase">Thao tác</div>
+                <div className="font-extrabold text-amber-300 text-[11px]">Chạm / Space</div>
               </div>
               <div className="border-x border-slate-800">
-                <div className="text-[9px] text-slate-500 font-bold uppercase">Điều khiển</div>
-                <div className="font-extrabold text-emerald-300 text-[11px]">Phím / Chạm</div>
+                <div className="text-[9px] text-slate-500 font-bold uppercase">Độ khó</div>
+                <div className="font-extrabold text-orange-400 text-[11px]">Thử thách</div>
               </div>
               <div>
-                <div className="text-[9px] text-slate-500 font-bold uppercase">Danh hiệu</div>
-                <div className="font-extrabold text-amber-400 text-[11px]">4 Huy Chương</div>
+                <div className="text-[9px] text-slate-500 font-bold uppercase">Huy chương</div>
+                <div className="font-extrabold text-yellow-300 text-[11px]">4 Cấp độ</div>
               </div>
             </div>
           </div>
@@ -216,14 +223,14 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
               haptics.tap();
               onSelectFlappy();
             }}
-            className="w-full mt-3 py-3 rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-400/30 transition-all cursor-pointer group-hover:scale-[1.02] active:scale-95"
+            className="w-full mt-3 py-3 rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-500/30 transition-all cursor-pointer group-hover:scale-[1.02] active:scale-95"
           >
             <Play className="w-3.5 h-3.5 fill-slate-950" />
-            <span>CHƠI FLAPPY BIRD NGAY</span>
+            <span>BAY CÙNG CHIM NGAY</span>
           </button>
         </div>
 
-        {/* GAME 3: PHUONG MEMORY (LẬT BÀI 8 MÀN 10 PHÚT) */}
+        {/* GAME 3: PHUONG MEMORY (LẬT BÀI TRÍ NHỚ 8 MÀN 10 PHÚT) */}
         <div className="group relative rounded-3xl bg-gradient-to-b from-slate-900/95 to-slate-950/95 border-2 border-slate-800 hover:border-violet-500/60 p-5 shadow-2xl transition-all duration-300 hover:-translate-y-1.5 flex flex-col justify-between overflow-hidden">
           <div className="absolute top-0 right-0 w-28 h-28 bg-violet-500/10 rounded-full blur-2xl group-hover:bg-violet-500/20 transition-all pointer-events-none" />
 
@@ -231,7 +238,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
             <div className="flex items-center justify-between mb-3">
               <span className="px-2.5 py-0.5 rounded-full bg-violet-500/15 border border-violet-500/30 text-violet-300 text-[10px] font-extrabold flex items-center gap-1">
                 <Sparkles className="w-3 h-3" />
-                <span>Lật Thẻ Bài</span>
+                <span>Trí Nhớ Siêu Phàm</span>
               </span>
               <span className="text-[11px] font-bold text-violet-300 flex items-center gap-1">
                 <Trophy className="w-3 h-3 text-yellow-400" />
@@ -240,22 +247,22 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
             </div>
 
             <div className="flex items-center gap-3.5 mb-2.5">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-violet-500 to-purple-400 flex items-center justify-center shadow-lg shadow-violet-500/30 shrink-0">
-                <Sparkles className="w-7 h-7 text-slate-950" />
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/30 shrink-0 p-1">
+                <BirdAvatar size={48} animate={false} />
               </div>
               <div>
                 <h2 className="text-lg font-black font-arcade text-violet-300 group-hover:text-violet-200 transition-colors">
                   Phuong Memory
                 </h2>
                 <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">
-                  Ghi nhớ và tìm các cặp ảnh giống nhau qua 8 màn thử thách.
+                  Thử thách lật bài tìm cặp ảnh giống nhau qua 8 màn chơi căng thẳng!
                 </p>
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-1.5 py-2.5 px-3 rounded-2xl bg-slate-950/80 border border-slate-800/80 text-center my-2 text-xs">
               <div>
-                <div className="text-[9px] text-slate-500 font-bold uppercase">Độ dài</div>
+                <div className="text-[9px] text-slate-500 font-bold uppercase">Cấp độ</div>
                 <div className="font-extrabold text-amber-300 text-[11px]">8 Màn</div>
               </div>
               <div className="border-x border-slate-800">
@@ -275,7 +282,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
               haptics.tap();
               onSelectMemory();
             }}
-            className="w-full mt-3 py-3 rounded-2xl bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-400 hover:to-purple-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-violet-500/30 transition-all cursor-pointer group-hover:scale-[1.02] active:scale-95"
+            className="w-full mt-3 py-3 rounded-2xl bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-400 hover:to-purple-500 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-violet-500/30 transition-all cursor-pointer group-hover:scale-[1.02] active:scale-95"
           >
             <Play className="w-3.5 h-3.5 fill-slate-950" />
             <span>CHƠI LẬT BÀI NGAY</span>
@@ -338,6 +345,65 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
           >
             <Play className="w-3.5 h-3.5 fill-white" />
             <span>CHƠI SIÊU NHÂN NGAY</span>
+          </button>
+        </div>
+
+        {/* GAME 5: PHUONG DORAJUMP (MÈO MÁY CHONG CHÓNG TRE) */}
+        <div className="group relative rounded-3xl bg-gradient-to-b from-slate-900/95 to-slate-950/95 border-2 border-slate-800 hover:border-amber-400/60 p-5 shadow-2xl transition-all duration-300 hover:-translate-y-1.5 flex flex-col justify-between overflow-hidden">
+          <div className="absolute top-0 right-0 w-28 h-28 bg-amber-400/10 rounded-full blur-2xl group-hover:bg-amber-400/20 transition-all pointer-events-none" />
+
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <span className="px-2.5 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-300 text-[10px] font-extrabold flex items-center gap-1">
+                <Sparkles className="w-3 h-3" />
+                <span>Leo Tháp Mây</span>
+              </span>
+              <span className="text-[11px] font-bold text-amber-300 flex items-center gap-1">
+                <Trophy className="w-3 h-3 text-yellow-400" />
+                <span>Kỷ lục: {doraJumpBest.toLocaleString()}m</span>
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3.5 mb-2.5">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-sky-400 to-blue-500 flex items-center justify-center shadow-lg shadow-sky-500/30 shrink-0 p-1">
+                <DoraemonAvatar size={48} animate={false} />
+              </div>
+              <div>
+                <h2 className="text-lg font-black font-arcade text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-sky-300 to-pink-300 group-hover:brightness-110 transition-all">
+                  DoraJump
+                </h2>
+                <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">
+                  Mèo máy chong chóng tre bật nhảy lên vũ trụ, ăn bánh rán & xuyên cửa thần kỳ!
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-1.5 py-2.5 px-3 rounded-2xl bg-slate-950/80 border border-slate-800/80 text-center my-2 text-xs">
+              <div>
+                <div className="text-[9px] text-slate-500 font-bold uppercase">Bảo bối</div>
+                <div className="font-extrabold text-amber-300 text-[11px]">Bánh rán/Cửa</div>
+              </div>
+              <div className="border-x border-slate-800">
+                <div className="text-[9px] text-slate-500 font-bold uppercase">Chong chóng</div>
+                <div className="font-extrabold text-sky-400 text-[11px]">Rocket Boost</div>
+              </div>
+              <div>
+                <div className="text-[9px] text-slate-500 font-bold uppercase">Thế giới</div>
+                <div className="font-extrabold text-pink-400 text-[11px]">3 Tầng Mây</div>
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              haptics.tap();
+              onSelectDoraJump();
+            }}
+            className="w-full mt-3 py-3 rounded-2xl bg-gradient-to-r from-amber-400 via-yellow-300 to-sky-400 hover:from-amber-300 hover:to-sky-300 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-400/30 transition-all cursor-pointer group-hover:scale-[1.02] active:scale-95"
+          >
+            <Play className="w-3.5 h-3.5 fill-slate-950" />
+            <span>BAY CÙNG MÈO MÁY</span>
           </button>
         </div>
       </div>

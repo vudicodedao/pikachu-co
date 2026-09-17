@@ -24,6 +24,7 @@ import { FlappyGame } from './components/FlappyGame';
 import { GameLobby } from './components/GameLobby';
 import { MemoryGame } from './components/MemoryGame';
 import { CatcherGame } from './components/CatcherGame';
+import { DoraJumpGame } from './components/DoraJumpGame';
 import { LockScreen } from './components/LockScreen';
 import { LandscapePromptModal } from './components/LandscapePromptModal';
 import { isAuthenticated, lockPortal } from './utils/auth';
@@ -33,8 +34,8 @@ export const App: React.FC = () => {
   // Trạng thái mở khóa bảo mật riêng tư (Mật khẩu: 02102004)
   const [isUnlocked, setIsUnlocked] = useState<boolean>(() => isAuthenticated());
 
-  // Chế độ màn hình: 'lobby' (Sảnh chọn game), 'pikachu', 'flappy', 'memory', 'catcher'
-  const [activeView, setActiveView] = useState<'lobby' | 'pikachu' | 'flappy' | 'memory' | 'catcher'>('lobby');
+  // Chế độ màn hình: 'lobby', 'pikachu', 'flappy', 'memory', 'catcher', 'dorajump'
+  const [activeView, setActiveView] = useState<'lobby' | 'pikachu' | 'flappy' | 'memory' | 'catcher' | 'dorajump'>('lobby');
 
   // Cài đặt game
   const [settings, setSettings] = useState<GameSettings>(() => loadSettings());
@@ -417,6 +418,12 @@ export const App: React.FC = () => {
     setActiveView('catcher');
   };
 
+  // Vào game Phuong DoraJump (Mèo máy chong chóng tre): ngắt nhạc nền Pikachu
+  const handleEnterDoraJump = () => {
+    bgm.setEnabled(false);
+    setActiveView('dorajump');
+  };
+
   // Quay về Sảnh chính (Lobby): tắt toàn bộ âm thanh
   const handleBackToLobby = () => {
     bgm.setEnabled(false);
@@ -443,6 +450,7 @@ export const App: React.FC = () => {
         onSelectFlappy={handleEnterFlappy}
         onSelectMemory={handleEnterMemory}
         onSelectCatcher={handleEnterCatcher}
+        onSelectDoraJump={handleEnterDoraJump}
         onLock={handleLock}
         pikachuBestScore={leaderboard[0]?.score || 0}
       />
@@ -462,6 +470,11 @@ export const App: React.FC = () => {
   // 4. GAME PHUONG CATCHER (SIÊU NHÂN HỨNG BẠN GÁI & TIM)
   if (activeView === 'catcher') {
     return <CatcherGame onBackToLobby={handleBackToLobby} />;
+  }
+
+  // 5. GAME PHUONG DORAJUMP (MÈO MÁY CHONG CHÓNG TRE)
+  if (activeView === 'dorajump') {
+    return <DoraJumpGame onBackToLobby={handleBackToLobby} />;
   }
 
   // 3. GAME PIKACHU
