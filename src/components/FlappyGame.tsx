@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Volume2, VolumeX, RotateCcw, ArrowLeft, Trophy, Maximize, Minimize, Sparkles } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { flappySound } from '../core/flappySound';
+import { haptics } from '../utils/haptics';
+import { PortraitPromptModal } from './PortraitPromptModal';
 
 interface FlappyGameProps {
   onBackToLobby: () => void;
@@ -43,6 +45,22 @@ export const FlappyGame: React.FC<FlappyGameProps> = ({ onBackToLobby }) => {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isNewBest, setIsNewBest] = useState(false);
+
+  // Nhắc xoay dọc khi chơi trên mobile ở chế độ ngang (Phương án 2B)
+  const [isLandscapeMobile, setIsLandscapeMobile] = useState(() => window.innerWidth > window.innerHeight && window.innerHeight < 600);
+  const [bypassPortraitPrompt, setBypassPortraitPrompt] = useState(false);
+
+  useEffect(() => {
+    const checkOrientation = () => {
+      setIsLandscapeMobile(window.innerWidth > window.innerHeight && window.innerHeight < 600);
+    };
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('orientationchange', checkOrientation);
+    return () => {
+      window.removeEventListener('resize', checkOrientation);
+      window.removeEventListener('orientationchange', checkOrientation);
+    };
+  }, []);
 
   // Head Canvas pre-processed from public/flappy-face.jpg
   const headCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -134,6 +152,7 @@ export const FlappyGame: React.FC<FlappyGameProps> = ({ onBackToLobby }) => {
 
   // Xử lý cú nhảy của chim
   const handleJump = useCallback(() => {
+    haptics.tap();
     if (gameStateRef.current === 'idle') {
       resetGame();
       return;
@@ -247,6 +266,7 @@ export const FlappyGame: React.FC<FlappyGameProps> = ({ onBackToLobby }) => {
             pipe.passed = true;
             scoreRef.current += 1;
             setScore(scoreRef.current);
+            haptics.success();
             flappySound.playPoint();
 
             // Cập nhật Best Score
@@ -268,6 +288,7 @@ export const FlappyGame: React.FC<FlappyGameProps> = ({ onBackToLobby }) => {
         if (bird.y >= floorY) {
           bird.y = floorY;
           setGameState('game_over');
+          haptics.error();
           flappySound.playHit();
           flappySound.playDie();
           if (scoreRef.current >= 15) {
@@ -297,6 +318,7 @@ export const FlappyGame: React.FC<FlappyGameProps> = ({ onBackToLobby }) => {
               bird.y + bird.radius - 4 > bottomPipeTop
             ) {
               setGameState('game_over');
+              haptics.error();
               flappySound.playHit();
               flappySound.playDie();
               if (scoreRef.current >= 15) {
@@ -534,30 +556,36 @@ export const FlappyGame: React.FC<FlappyGameProps> = ({ onBackToLobby }) => {
   const medal = getMedal(score);
 
   return (
-    <div className="w-screen h-screen bg-slate-950 flex flex-col items-center justify-center select-none overflow-hidden text-slate-100 relative">
+    <div className="w-screen min-h-dvh h-dvh bg-slate-950 flex flex-col items-center justify-center select-none overflow-hidden text-slate-100 relative overscroll-none p-2 sm:p-4">
       {/* THANH ĐIỀU KHIỂN TRÊN ĐẦU */}
-      <header className="absolute top-3 left-4 right-4 z-30 flex items-center justify-between max-w-lg mx-auto">
+      <header className="absolute top-2.5 sm:top-3 left-3 right-3 sm:left-4 sm:right-4 z-30 flex items-center justify-between max-w-lg mx-auto">
         <button
           type="button"
-          onClick={onBackToLobby}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-700 hover:bg-slate-800 text-slate-200 text-xs font-bold shadow-lg transition-all cursor-pointer backdrop-blur-md"
+          onClick={() => {
+            haptics.tap();
+            onBackToLobby();
+          }}
+          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-700 hover:bg-slate-800 text-slate-200 text-xs font-bold shadow-lg transition-all cursor-pointer backdrop-blur-md active:scale-95"
         >
-          <ArrowLeft className="w-4 h-4 text-amber-400" />
-          <span>Về Menu chính</span>
+          <ArrowLeft className="w-3.5 h-3.5 text-amber-400" />
+          <span className="text-[11px] sm:text-xs">Sảnh</span>
         </button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           {/* Kỷ lục */}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-700 text-xs font-bold text-amber-300 backdrop-blur-md shadow-lg">
+          <div className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-700 text-xs font-bold text-amber-300 backdrop-blur-md shadow-lg">
             <Trophy className="w-3.5 h-3.5 text-yellow-400" />
-            <span>Kỷ lục: {bestScore}</span>
+            <span className="text-[11px] sm:text-xs">Kỷ lục: {bestScore}</span>
           </div>
 
           {/* Âm thanh */}
           <button
             type="button"
-            onClick={() => setSoundEnabled(!soundEnabled)}
-            className={`p-2 rounded-xl border transition-all cursor-pointer shadow-lg backdrop-blur-md ${
+            onClick={() => {
+              haptics.tap();
+              setSoundEnabled(!soundEnabled);
+            }}
+            className={`p-1.5 sm:p-2 rounded-xl border transition-all cursor-pointer shadow-lg backdrop-blur-md active:scale-95 ${
               soundEnabled
                 ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
                 : 'bg-slate-800 border-slate-700 text-slate-500'
@@ -571,7 +599,7 @@ export const FlappyGame: React.FC<FlappyGameProps> = ({ onBackToLobby }) => {
           <button
             type="button"
             onClick={toggleFullscreen}
-            className="p-2 rounded-xl bg-slate-900/90 border border-slate-700 hover:bg-slate-800 text-sky-300 cursor-pointer shadow-lg backdrop-blur-md"
+            className="p-1.5 sm:p-2 rounded-xl bg-slate-900/90 border border-slate-700 hover:bg-slate-800 text-sky-300 cursor-pointer shadow-lg backdrop-blur-md active:scale-95"
             title="Toàn màn hình"
           >
             {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
@@ -580,19 +608,30 @@ export const FlappyGame: React.FC<FlappyGameProps> = ({ onBackToLobby }) => {
       </header>
 
       {/* KHUNG ARCADE CHỨA CANVAS GAME */}
-      <div className="relative rounded-3xl overflow-hidden border-4 border-slate-800 shadow-[0_0_50px_rgba(56,189,248,0.25)] bg-slate-900 cursor-pointer">
+      <div
+        onTouchStart={(e) => {
+          e.preventDefault();
+          handleJump();
+        }}
+        className="relative rounded-3xl overflow-hidden border-2 sm:border-4 border-slate-800 shadow-[0_0_50px_rgba(56,189,248,0.25)] bg-slate-900 cursor-pointer max-w-[calc(100vw-24px)] max-h-[calc(100dvh-80px)] aspect-[400/600] flex items-center justify-center touch-none mt-10 sm:mt-0"
+        style={{ touchAction: 'none' }}
+      >
         <canvas
           ref={canvasRef}
           width={CANVAS_WIDTH}
           height={CANVAS_HEIGHT}
           onClick={handleJump}
-          className="block"
+          className="w-full h-full object-contain block touch-none"
         />
 
         {/* MÀN HÌNH CHỜ (IDLE) */}
         {gameState === 'idle' && (
           <div
             onClick={handleJump}
+            onTouchStart={(e) => {
+              e.preventDefault();
+              handleJump();
+            }}
             className="absolute inset-0 bg-slate-950/40 backdrop-blur-[2px] flex flex-col items-center justify-center text-center p-6 cursor-pointer"
           >
             <div className="space-y-3 animate-pulse">
@@ -672,6 +711,11 @@ export const FlappyGame: React.FC<FlappyGameProps> = ({ onBackToLobby }) => {
       <footer className="mt-4 text-center text-slate-500 text-xs font-medium">
         Bấm chuột hoặc phím <kbd className="px-2 py-0.5 bg-slate-800 rounded border border-slate-700 text-slate-300 font-mono">SPACE</kbd> để nhảy
       </footer>
+
+      {/* MODAL NHẮC XOAY DỌC ĐIỆN THOẠI (PHƯƠNG ÁN 2B) */}
+      {isLandscapeMobile && !bypassPortraitPrompt && (
+        <PortraitPromptModal onDismiss={() => setBypassPortraitPrompt(true)} />
+      )}
     </div>
   );
 };

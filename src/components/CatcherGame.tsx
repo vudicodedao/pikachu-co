@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   ArrowLeft,
+  ArrowRight,
   Volume2,
   VolumeX,
   Music,
@@ -31,6 +32,7 @@ import {
   clearLeaderboard,
   CATCHER_LEADERBOARD_KEY,
 } from '../utils/leaderboard';
+import { haptics } from '../utils/haptics';
 
 interface CatcherGameProps {
   onBackToLobby: () => void;
@@ -150,6 +152,7 @@ export const CatcherGame: React.FC<CatcherGameProps> = ({ onBackToLobby }) => {
   const magnetTimerRef = useRef(0);
   const sessionStartTimeRef = useRef(Date.now());
   const maxHpReachedRef = useRef(100);
+  const targetTouchXRef = useRef<number | null>(null);
 
   // Refs DOM
   const volumeBtnRef = useRef<HTMLButtonElement | null>(null);
@@ -366,13 +369,23 @@ export const CatcherGame: React.FC<CatcherGameProps> = ({ onBackToLobby }) => {
       if (isLeft) moveDir -= 1;
       if (isRight) moveDir += 1;
 
-      // Di chuyển ngang mượt mà
-      player.vx = moveDir * player.speed;
-      player.x += player.vx * dt;
+      // Di chuyển ngang mượt mà bằng bàn phím/nút ảo hoặc theo ngón tay chạm lướt
+      if (moveDir !== 0) {
+        player.vx = moveDir * player.speed;
+        player.x += player.vx * dt;
+        player.lean = moveDir * 0.15;
+      } else if (targetTouchXRef.current !== null) {
+        const targetX = targetTouchXRef.current;
+        const diff = targetX - player.x;
+        player.x += diff * Math.min(1, dt * 14);
+        player.lean = Math.max(-0.25, Math.min(0.25, diff * 0.012));
+      } else {
+        player.vx = 0;
+        player.lean = 0;
+      }
 
       // Khóa vị trí trong khung chơi
       player.x = Math.max(player.width / 2 + 10, Math.min(width - player.width / 2 - 10, player.x));
-      player.lean = moveDir * 0.15;
 
       // Đếm ngược Nam châm
       if (magnetTimerRef.current > 0) {
@@ -478,6 +491,7 @@ export const CatcherGame: React.FC<CatcherGameProps> = ({ onBackToLobby }) => {
             if (item.type === 'photo' && item.tier) {
               // HỨNG TRÚNG HÌNH EM BÉ: CỘNG THẲNG VÀO MÁU (HP = SCORE TĂNG LIÊN TỤC)
               const earned = item.tier.points;
+              haptics.catchItem();
               setCombo((prev) => {
                 const nextCombo = prev + 1;
                 catcherSound.playCatch(nextCombo);
@@ -495,6 +509,7 @@ export const CatcherGame: React.FC<CatcherGameProps> = ({ onBackToLobby }) => {
               addParticles(item.x, item.y, '#10b981', 14);
             } else if (item.type === 'heart') {
               // HỨNG TRÁI TIM VÀNG: HỒI 1 TIM & CỘNG 50 MÁU
+              haptics.success();
               catcherSound.playHeart();
               setLives((l) => Math.min(3, l + 1));
               setHp((prevHp) => prevHp + 50);
@@ -502,6 +517,7 @@ export const CatcherGame: React.FC<CatcherGameProps> = ({ onBackToLobby }) => {
               addParticles(item.x, item.y, '#f59e0b', 16);
             } else if (item.type === 'magnet') {
               // HỨNG NAM CHÂM: HÚT ẢNH 6 GIÂY + 25 MÁU
+              haptics.success();
               catcherSound.playPowerup();
               magnetTimerRef.current = 6.0;
               setMagnetTimeLeft(6);
@@ -510,6 +526,7 @@ export const CatcherGame: React.FC<CatcherGameProps> = ({ onBackToLobby }) => {
               addParticles(item.x, item.y, '#38bdf8', 18);
             } else if (item.type === 'lightning') {
               // TRÚNG TIA SÉT ĐỎ: TRỪ 1 TIM & TRỪ 50 MÁU
+              haptics.error();
               catcherSound.playHit();
               screenShakeRef.current = 0.32;
               setCombo(0);
@@ -520,6 +537,7 @@ export const CatcherGame: React.FC<CatcherGameProps> = ({ onBackToLobby }) => {
                 const nextLives = prevLives - 1;
                 if (nextLives <= 0) {
                   setGameState('game_over');
+                  haptics.gameOver();
                   catcherSound.playGameOver();
                   recordLeaderboard(hp, wave, elapsedSeconds);
                   return 0;
@@ -531,6 +549,7 @@ export const CatcherGame: React.FC<CatcherGameProps> = ({ onBackToLobby }) => {
                 const nextHp = Math.max(0, prevHp - 50);
                 if (nextHp <= 0) {
                   setGameState('game_over');
+                  haptics.gameOver();
                   catcherSound.playGameOver();
                   recordLeaderboard(0, wave, elapsedSeconds);
                   return 0;
@@ -548,6 +567,7 @@ export const CatcherGame: React.FC<CatcherGameProps> = ({ onBackToLobby }) => {
             // ĐỂ RƠI MẤT HÌNH EM BÉ: TRỪ MÁU THEO MỐC
             if (item.type === 'photo' && item.tier) {
               const penalty = item.tier.penalty;
+              haptics.tap();
               setCombo(0);
               addFloatingText(`-${penalty} HP`, item.x, height - 25, '#ef4444');
 
@@ -555,6 +575,7 @@ export const CatcherGame: React.FC<CatcherGameProps> = ({ onBackToLobby }) => {
                 const nextHp = Math.max(0, prevHp - penalty);
                 if (nextHp <= 0) {
                   setGameState('game_over');
+                  haptics.gameOver();
                   catcherSound.playGameOver();
                   recordLeaderboard(0, wave, elapsedSeconds);
                   return 0;
@@ -874,23 +895,62 @@ export const CatcherGame: React.FC<CatcherGameProps> = ({ onBackToLobby }) => {
     return () => cancelAnimationFrame(animationFrameId);
   }, [gameState, wave, customPhotos, getPreloadedImage, hp, elapsedSeconds, recordLeaderboard]);
 
-  // Điều chỉnh kích thước canvas: Rộng 640px, Cao toàn màn hình (h-screen)
+  // Điều chỉnh kích thước canvas thích ứng màn hình & Đăng ký Touch Drag cho di động
   useEffect(() => {
-    const handleResize = () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const parent = canvas.parentElement;
-      if (!parent) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const parent = canvas.parentElement;
+    if (!parent) return;
 
-      const h = parent.clientHeight;
-      canvas.width = 640;
+    const handleResize = () => {
+      const w = Math.min(640, parent.clientWidth || window.innerWidth);
+      const h = parent.clientHeight || window.innerHeight;
+      canvas.width = w;
       canvas.height = h;
-      playerRef.current.x = 320;
+      playerRef.current.x = Math.max(50, Math.min(w - 50, playerRef.current.x));
     };
 
     handleResize();
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+
+    const getCanvasX = (touch: Touch) => {
+      const rect = canvas.getBoundingClientRect();
+      const scale = canvas.width / rect.width;
+      return (touch.clientX - rect.left) * scale;
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        e.preventDefault();
+        targetTouchXRef.current = getCanvasX(e.touches[0]);
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        e.preventDefault();
+        targetTouchXRef.current = getCanvasX(e.touches[0]);
+      }
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length === 0) {
+        targetTouchXRef.current = null;
+      }
+    };
+
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+    canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+    canvas.addEventListener('touchend', handleTouchEnd);
+    canvas.addEventListener('touchcancel', handleTouchEnd);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      canvas.removeEventListener('touchstart', handleTouchStart);
+      canvas.removeEventListener('touchmove', handleTouchMove);
+      canvas.removeEventListener('touchend', handleTouchEnd);
+      canvas.removeEventListener('touchcancel', handleTouchEnd);
+    };
   }, []);
 
   const toggleFullscreen = () => {
@@ -908,9 +968,146 @@ export const CatcherGame: React.FC<CatcherGameProps> = ({ onBackToLobby }) => {
   };
 
   return (
-    <div className="w-screen h-screen bg-slate-950 text-slate-100 flex flex-row overflow-hidden select-none">
-      {/* 1. CỘT SIDEBAR BÊN TRÁI: ĐẦY ĐỦ THÔNG SỐ & ĐIỀU KHIỂN */}
-      <aside className="w-72 sm:w-80 h-screen shrink-0 bg-slate-900/95 border-r border-slate-800 p-4 flex flex-col justify-between z-20 backdrop-blur-md overflow-y-auto">
+    <div className="w-screen min-h-dvh h-dvh bg-slate-950 text-slate-100 flex flex-col lg:flex-row overflow-hidden select-none overscroll-none">
+      {/* 0. THANH HUD CHO MOBILE / TABLET (< lg) */}
+      <header className="lg:hidden w-full bg-slate-900/95 border-b border-slate-800 px-3 py-1.5 flex flex-col gap-1.5 z-20 shrink-0 backdrop-blur-md">
+        {/* Hàng 1: Trạng thái Game - Sảnh, HP, Mạng, Wave, Thời gian */}
+        <div className="w-full flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                haptics.tap();
+                catcherSound.stopBgm();
+                onBackToLobby();
+              }}
+              className="p-1.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 active:scale-95 flex items-center gap-1 text-xs font-bold"
+              title="Về Sảnh"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span className="text-[11px]">Sảnh</span>
+            </button>
+            <div className="flex items-center gap-1 font-arcade text-xs text-rose-400 font-bold bg-slate-950 px-2 py-1 rounded-xl border border-slate-800">
+              <Heart className="w-3 h-3 fill-rose-500 text-rose-500" />
+              <span>{hp} HP</span>
+            </div>
+            <div className="flex items-center gap-0.5">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <span key={i} className={`text-xs ${i < lives ? 'opacity-100' : 'opacity-20'}`}>
+                  ❤️
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300">
+            <span className="px-2 py-0.5 rounded-lg bg-amber-400/15 border border-amber-400/30 text-[10px]">
+              W{wave}
+            </span>
+            <span className="text-slate-400 font-medium text-[11px]">⏱️ {formatTime(elapsedSeconds)}</span>
+          </div>
+        </div>
+
+        {/* Hàng 2: Menu công cụ điều khiển tiện ích trên mobile (BGM, SFX, Pause, Kỷ lục, Fullscreen, Restart) */}
+        <div className="w-full flex items-center justify-between pt-1 border-t border-slate-800/80">
+          <div className="flex items-center gap-1 bg-slate-950/80 p-0.5 rounded-xl border border-slate-800">
+            {/* Nhạc nền BGM */}
+            <button
+              type="button"
+              onClick={() => {
+                haptics.tap();
+                const next = !bgmEnabled;
+                setBgmEnabled(next);
+                catcherSound.setBgmEnabled(next);
+              }}
+              className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                bgmEnabled
+                  ? 'bg-sky-500/20 border-sky-500/50 text-sky-300'
+                  : 'bg-slate-800 border-slate-700 text-slate-500'
+              }`}
+              title={bgmEnabled ? 'Tắt nhạc nền' : 'Bật nhạc nền'}
+            >
+              <Music className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Tiếng hiệu ứng SFX */}
+            <button
+              type="button"
+              onClick={() => {
+                haptics.tap();
+                const next = !soundEnabled;
+                setSoundEnabled(next);
+                catcherSound.sfxEnabled = next;
+              }}
+              className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                soundEnabled
+                  ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
+                  : 'bg-slate-800 border-slate-700 text-slate-500'
+              }`}
+              title={soundEnabled ? 'Tắt tiếng hiệu ứng' : 'Bật tiếng hiệu ứng'}
+            >
+              {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            {/* Tạm dừng */}
+            <button
+              type="button"
+              onClick={() => {
+                haptics.tap();
+                setGameState((prev) => (prev === 'playing' ? 'paused' : 'playing'));
+              }}
+              className="p-1.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 active:scale-95"
+              title={gameState === 'playing' ? 'Tạm dừng' : 'Tiếp tục'}
+            >
+              {gameState === 'playing' ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 text-emerald-400" />}
+            </button>
+
+            {/* Bảng xếp hạng */}
+            <button
+              type="button"
+              onClick={() => {
+                haptics.tap();
+                setIsLeaderboardOpen(true);
+              }}
+              className="p-1.5 rounded-xl bg-slate-800 border border-slate-700 text-amber-400 active:scale-95"
+              title="Bảng xếp hạng"
+            >
+              <Trophy className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Fullscreen */}
+            <button
+              type="button"
+              onClick={() => {
+                haptics.tap();
+                toggleFullscreen();
+              }}
+              className="p-1.5 rounded-xl bg-slate-800 border border-slate-700 text-sky-300 active:scale-95"
+              title="Toàn màn hình"
+            >
+              {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
+            </button>
+
+            {/* Restart */}
+            <button
+              type="button"
+              onClick={() => {
+                haptics.tap();
+                handleRestart();
+              }}
+              className="p-1.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 active:scale-95"
+              title="Chơi lại trận mới"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* 1. CỘT SIDEBAR BÊN TRÁI: HIỂN THỊ TRÊN MÀN HÌNH LỚN (>= lg) */}
+      <aside className="hidden lg:flex w-72 sm:w-80 h-full shrink-0 bg-slate-900/95 border-r border-slate-800 p-4 flex-col justify-between z-20 backdrop-blur-md overflow-y-auto">
         {/* Nhóm 1: Tiêu đề & Mascot */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -950,29 +1147,34 @@ export const CatcherGame: React.FC<CatcherGameProps> = ({ onBackToLobby }) => {
           {/* Nhóm 2: MÁU HIỆN TẠI & SỐ TIM */}
           <div className="p-3.5 rounded-2xl bg-slate-950/90 border border-slate-800 space-y-2.5 shadow-inner">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1">
-                <Activity className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wide flex items-center gap-1.5">
+                <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />
                 <span>Máu Hiện Tại</span>
               </span>
-              <span className="text-[10px] font-bold text-slate-400">
-                Kỷ lục: <strong className="text-emerald-400">{bestHp.toLocaleString()}</strong>
+              <span className="font-arcade text-xs text-rose-400 font-bold">
+                {hp} HP
               </span>
             </div>
 
-            <div className="text-2xl sm:text-3xl font-black font-arcade text-amber-300 tracking-wider">
-              {hp.toLocaleString()}
-              <span className="text-xs font-sans font-bold text-emerald-400 ml-1.5">HP</span>
+            {/* Thanh tiến trình Máu */}
+            <div className="w-full h-3 rounded-full bg-slate-800 overflow-hidden p-0.5 border border-slate-700">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-rose-500 via-amber-400 to-emerald-400 transition-all duration-300 shadow-[0_0_12px_rgba(244,63,94,0.6)]"
+                style={{ width: `${Math.min(100, Math.max(8, (hp / 500) * 100))}%` }}
+              />
             </div>
 
-            {/* 3 Trái tim */}
-            <div className="flex items-center justify-between border-t border-slate-800/80 pt-2">
-              <span className="text-[11px] font-bold text-slate-400">Sinh Mạng:</span>
-              <div className="flex items-center gap-1.5">
+            {/* Tim sống sót */}
+            <div className="flex items-center justify-between pt-1">
+              <span className="text-[11px] font-bold text-slate-400">Số mạng (Tim):</span>
+              <div className="flex items-center gap-1">
                 {Array.from({ length: 3 }).map((_, i) => (
                   <Heart
                     key={i}
                     className={`w-4 h-4 transition-all ${
-                      i < lives ? 'text-rose-500 fill-rose-500 animate-pulse' : 'text-slate-700 fill-slate-800'
+                      i < lives
+                        ? 'text-rose-500 fill-rose-500 scale-110 drop-shadow-[0_0_6px_rgba(244,63,94,0.7)]'
+                        : 'text-slate-700'
                     }`}
                   />
                 ))}
@@ -980,42 +1182,54 @@ export const CatcherGame: React.FC<CatcherGameProps> = ({ onBackToLobby }) => {
             </div>
           </div>
 
-          {/* Nhóm 3: WAVE, THỜI GIAN & COMBO */}
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 flex flex-col items-center">
-              <span className="text-[10px] uppercase font-bold text-slate-400">Đợt</span>
-              <span className="text-base font-extrabold text-sky-400">Wave {wave}</span>
+          {/* Nhóm 3: Wave & Thời gian */}
+          <div className="grid grid-cols-2 gap-2 text-center text-xs">
+            <div className="p-3 rounded-2xl bg-slate-950/70 border border-slate-800">
+              <div className="text-[10px] text-slate-500 font-bold uppercase">Cấp Độ</div>
+              <div className="font-black font-arcade text-amber-400 text-sm mt-0.5">
+                Wave {wave}
+              </div>
             </div>
-
-            <div className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 flex flex-col items-center">
-              <span className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1">
-                <Clock className="w-3 h-3 text-amber-400" />
-                <span>Thời gian</span>
-              </span>
-              <span className="text-sm font-arcade text-amber-300">{formatTime(elapsedSeconds)}</span>
+            <div className="p-3 rounded-2xl bg-slate-950/70 border border-slate-800">
+              <div className="text-[10px] text-slate-500 font-bold uppercase">Thời Gian</div>
+              <div className="font-black font-arcade text-sky-400 text-sm mt-0.5">
+                {formatTime(elapsedSeconds)}
+              </div>
             </div>
           </div>
 
-          {/* Combo streak & Buff nam châm */}
-          <div className="space-y-1.5">
-            {combo >= 2 && (
-              <div className="p-2 rounded-xl bg-gradient-to-r from-orange-500/20 to-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-arcade flex items-center justify-center gap-1.5 animate-bounce">
-                <Flame className="w-4 h-4 text-orange-400 fill-orange-400" />
-                <span>COMBO x{combo}!</span>
+          {/* Nhóm 4: Combo & Nam châm */}
+          <div className="space-y-2">
+            {combo > 1 && (
+              <div className="p-2.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-between animate-pulse">
+                <span className="text-xs font-bold text-rose-300 flex items-center gap-1">
+                  <Flame className="w-3.5 h-3.5 text-rose-400 fill-rose-400" />
+                  <span>Combo Hứng Liên Tiếp</span>
+                </span>
+                <span className="font-arcade text-xs text-rose-400 font-black">
+                  x{combo}
+                </span>
               </div>
             )}
 
             {magnetTimeLeft > 0 && (
-              <div className="p-2 rounded-xl bg-sky-500/20 border border-sky-400 text-sky-300 text-xs font-bold flex items-center justify-center gap-1.5 animate-pulse">
-                <Magnet className="w-4 h-4" />
-                <span>NAM CHÂM HÚT: {magnetTimeLeft}s</span>
+              <div className="p-2.5 rounded-2xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-between">
+                <span className="text-xs font-bold text-sky-300 flex items-center gap-1">
+                  <Magnet className="w-3.5 h-3.5 text-sky-400" />
+                  <span>Hút Nam Châm</span>
+                </span>
+                <span className="font-arcade text-xs text-sky-300 font-black">
+                  {magnetTimeLeft}s
+                </span>
               </div>
             )}
           </div>
 
-          {/* Bảng phân loại điểm & phạt */}
-          <div className="p-3 rounded-2xl bg-slate-950/60 border border-slate-800 text-[11px] space-y-1">
-            <div className="text-[10px] uppercase font-bold text-slate-400 mb-1">Mốc điểm / Phạt hụt:</div>
+          {/* Nhóm 5: Bảng mốc điểm */}
+          <div className="p-3 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-1.5 text-[11px]">
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+              Mốc Điểm / Phạt
+            </div>
             <div className="flex justify-between text-slate-300 font-semibold">
               <span className="text-emerald-400">+10 (-3)</span>
               <span className="text-emerald-400">+20 (-6)</span>
@@ -1061,8 +1275,8 @@ export const CatcherGame: React.FC<CatcherGameProps> = ({ onBackToLobby }) => {
                 setBgmEnabled(next);
                 catcherSound.setBgmEnabled(next);
               }}
-              className={`p-2 rounded-xl border cursor-pointer transition-all ${
-                bgmEnabled ? 'bg-rose-500/20 border-rose-500/50 text-rose-300' : 'bg-slate-800 border-slate-700 text-slate-500'
+              className={`p-2 rounded-xl border transition-colors cursor-pointer ${
+                bgmEnabled ? 'bg-sky-500/20 border-sky-500/50 text-sky-300' : 'bg-slate-800 border-slate-700 text-slate-500'
               }`}
               title={bgmEnabled ? 'Tắt nhạc nền' : 'Bật nhạc nền'}
             >
@@ -1077,7 +1291,7 @@ export const CatcherGame: React.FC<CatcherGameProps> = ({ onBackToLobby }) => {
                 setSoundEnabled(next);
                 catcherSound.sfxEnabled = next;
               }}
-              className={`p-2 rounded-xl border cursor-pointer transition-all ${
+              className={`p-2 rounded-xl border transition-colors cursor-pointer ${
                 soundEnabled ? 'bg-amber-500/20 border-amber-500/50 text-amber-300' : 'bg-slate-800 border-slate-700 text-slate-500'
               }`}
               title={soundEnabled ? 'Tắt tiếng hiệu ứng' : 'Bật tiếng hiệu ứng'}
@@ -1097,24 +1311,77 @@ export const CatcherGame: React.FC<CatcherGameProps> = ({ onBackToLobby }) => {
           </div>
 
           <div className="text-[10px] text-slate-400 text-center font-bold">
-            Điều khiển: Dùng 2 phím ⬅️ ➡️ (hoặc A D)
+            Điều khiển: Dùng ⬅️ ➡️ hoặc trượt ngón tay
           </div>
         </div>
       </aside>
 
-      {/* 2. KHU VỰC CHƠI GAME CANVAS: MỞ RỘNG TOÀN CHIỀU CAO MÀN HÌNH (H-SCREEN) */}
-      <main className="flex-1 h-screen flex items-center justify-center p-0 overflow-hidden relative bg-slate-950">
-        <div className="relative w-[640px] max-w-full h-screen overflow-hidden shadow-2xl border-x-2 border-slate-800 bg-slate-900 flex flex-col">
-          <canvas ref={canvasRef} className="w-full h-full block" />
+      {/* 2. KHU VỰC CHƠI GAME CANVAS: MỞ RỘNG TỐI ĐA TRÊN MÀN HÌNH */}
+      <main className="flex-1 h-full flex items-center justify-center p-0 overflow-hidden relative bg-slate-950">
+        <div className="relative w-[640px] max-w-full h-full overflow-hidden shadow-2xl border-x-0 lg:border-x-2 border-slate-800 bg-slate-900 flex flex-col">
+          <canvas
+            ref={canvasRef}
+            className="w-full h-full block touch-none"
+            style={{ touchAction: 'none' }}
+          />
 
           {/* Hướng dẫn thao tác lúc đầu trận */}
           {elapsedSeconds < 4 && gameState === 'playing' && (
-            <div className="absolute bottom-6 inset-x-0 flex justify-center pointer-events-none animate-bounce">
-              <div className="px-4 py-2 rounded-2xl bg-slate-900/90 border border-slate-700 text-xs font-bold text-slate-200 shadow-xl flex items-center gap-2">
-                <span>👉 Bấm phím ⬅️ ➡️ (hoặc A D) để di chuyển Siêu Nhân!</span>
+            <div className="absolute bottom-16 sm:bottom-6 inset-x-0 flex justify-center pointer-events-none animate-bounce px-3">
+              <div className="px-3.5 py-1.5 rounded-2xl bg-slate-900/90 border border-slate-700 text-xs font-bold text-slate-200 shadow-xl flex items-center gap-2 text-center">
+                <span>👉 Dùng ⬅️ ➡️ hoặc trượt tay trên màn hình để di chuyển!</span>
               </div>
             </div>
           )}
+
+          {/* CẶP NÚT ẢO ĐIỀU KHIỂN BẰNG 2 NGÓN TAY CÁI CHO ĐIỆN THOẠI (< lg) - LIQUID GLASS */}
+          <div className="lg:hidden absolute bottom-5 inset-x-5 flex justify-between pointer-events-none z-20">
+            {/* Nút di chuyển Trái */}
+            <button
+              type="button"
+              onTouchStart={(e) => {
+                e.preventDefault();
+                haptics.tap();
+                keysDownRef.current['ArrowLeft'] = true;
+              }}
+              onTouchEnd={(e) => {
+                e.preventDefault();
+                keysDownRef.current['ArrowLeft'] = false;
+              }}
+              onMouseDown={() => {
+                keysDownRef.current['ArrowLeft'] = true;
+              }}
+              onMouseUp={() => {
+                keysDownRef.current['ArrowLeft'] = false;
+              }}
+              className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl liquid-glass-btn flex items-center justify-center pointer-events-auto transition-all duration-150 active:scale-85 active:bg-rose-500/40 active:border-rose-300/80 active:shadow-[0_0_25px_rgba(244,63,94,0.7)] select-none cursor-pointer"
+            >
+              <ArrowLeft className="w-8 h-8 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)] stroke-[2.8]" />
+            </button>
+
+            {/* Nút di chuyển Phải */}
+            <button
+              type="button"
+              onTouchStart={(e) => {
+                e.preventDefault();
+                haptics.tap();
+                keysDownRef.current['ArrowRight'] = true;
+              }}
+              onTouchEnd={(e) => {
+                e.preventDefault();
+                keysDownRef.current['ArrowRight'] = false;
+              }}
+              onMouseDown={() => {
+                keysDownRef.current['ArrowRight'] = true;
+              }}
+              onMouseUp={() => {
+                keysDownRef.current['ArrowRight'] = false;
+              }}
+              className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl liquid-glass-btn flex items-center justify-center pointer-events-auto transition-all duration-150 active:scale-85 active:bg-rose-500/40 active:border-rose-300/80 active:shadow-[0_0_25px_rgba(244,63,94,0.7)] select-none cursor-pointer"
+            >
+              <ArrowRight className="w-8 h-8 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)] stroke-[2.8]" />
+            </button>
+          </div>
 
           {/* MODAL TẠM DỪNG */}
           {gameState === 'paused' && (

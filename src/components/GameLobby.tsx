@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Trophy, Sparkles, Heart, Maximize, Minimize, Flame, Zap } from 'lucide-react';
+import { Play, Trophy, Sparkles, Heart, Maximize, Minimize, Flame, Zap, Lock } from 'lucide-react';
 import { BirdAvatar } from './BirdAvatar';
 import { SuperheroAvatar } from './SuperheroAvatar';
+import { haptics } from '../utils/haptics';
 
 interface GameLobbyProps {
   onSelectPikachu: () => void;
   onSelectFlappy: () => void;
   onSelectMemory: () => void;
   onSelectCatcher: () => void;
+  onLock?: () => void;
   pikachuBestScore?: number;
 }
 
@@ -16,6 +18,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
   onSelectFlappy,
   onSelectMemory,
   onSelectCatcher,
+  onLock,
   pikachuBestScore = 0,
 }) => {
   const [flappyBest, setFlappyBest] = useState(0);
@@ -41,6 +44,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
   }, []);
 
   const toggleFullscreen = () => {
+    haptics.tap();
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen();
     } else {
@@ -49,17 +53,31 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
   };
 
   return (
-    <div className="w-screen h-screen bg-slate-950 text-slate-100 flex flex-col justify-between items-center p-4 sm:p-6 select-none relative overflow-y-auto">
+    <div className="w-screen min-h-dvh h-dvh bg-slate-950 text-slate-100 flex flex-col justify-between items-center p-3 sm:p-6 select-none relative overflow-y-auto overscroll-none">
       {/* Nền hiệu ứng ánh sáng gradient lung linh */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(244,63,94,0.15),rgba(255,255,255,0))] pointer-events-none" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_50%_120%,rgba(56,189,248,0.1),rgba(255,255,255,0))] pointer-events-none" />
 
-      {/* Nút Toàn màn hình ở góc trên phải */}
-      <div className="absolute top-4 right-4 z-20">
+      {/* Nút Khóa & Toàn màn hình ở góc trên phải */}
+      <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 flex items-center gap-2">
+        {onLock && (
+          <button
+            type="button"
+            onClick={() => {
+              haptics.tap();
+              onLock();
+            }}
+            className="p-2 sm:p-2.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-rose-500/40 text-rose-300 hover:text-rose-200 shadow-xl transition-all cursor-pointer backdrop-blur-md flex items-center gap-1.5 text-xs font-bold active:scale-95"
+            title="Khóa bảo mật trang web"
+          >
+            <Lock className="w-4 h-4" />
+            <span className="hidden sm:inline">Khóa</span>
+          </button>
+        )}
         <button
           type="button"
           onClick={toggleFullscreen}
-          className="p-2.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-sky-300 shadow-xl transition-all cursor-pointer backdrop-blur-md flex items-center gap-1.5 text-xs font-bold"
+          className="p-2 sm:p-2.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-sky-300 shadow-xl transition-all cursor-pointer backdrop-blur-md flex items-center gap-1.5 text-xs font-bold active:scale-95"
           title="Toàn màn hình"
         >
           {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
@@ -135,8 +153,11 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
 
           <button
             type="button"
-            onClick={onSelectPikachu}
-            className="w-full mt-3 py-3 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-400 hover:to-pink-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-rose-500/30 transition-all cursor-pointer group-hover:scale-[1.02]"
+            onClick={() => {
+              haptics.tap();
+              onSelectPikachu();
+            }}
+            className="w-full mt-3 py-3 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-400 hover:to-pink-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-rose-500/30 transition-all cursor-pointer group-hover:scale-[1.02] active:scale-95"
           >
             <Play className="w-3.5 h-3.5 fill-slate-950" />
             <span>CHƠI PIKACHU NGAY</span>
@@ -191,8 +212,11 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
 
           <button
             type="button"
-            onClick={onSelectFlappy}
-            className="w-full mt-3 py-3 rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-400/30 transition-all cursor-pointer group-hover:scale-[1.02]"
+            onClick={() => {
+              haptics.tap();
+              onSelectFlappy();
+            }}
+            className="w-full mt-3 py-3 rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-400/30 transition-all cursor-pointer group-hover:scale-[1.02] active:scale-95"
           >
             <Play className="w-3.5 h-3.5 fill-slate-950" />
             <span>CHƠI FLAPPY BIRD NGAY</span>
@@ -247,8 +271,11 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
 
           <button
             type="button"
-            onClick={onSelectMemory}
-            className="w-full mt-3 py-3 rounded-2xl bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-400 hover:to-purple-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-violet-500/30 transition-all cursor-pointer group-hover:scale-[1.02]"
+            onClick={() => {
+              haptics.tap();
+              onSelectMemory();
+            }}
+            className="w-full mt-3 py-3 rounded-2xl bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-400 hover:to-purple-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-violet-500/30 transition-all cursor-pointer group-hover:scale-[1.02] active:scale-95"
           >
             <Play className="w-3.5 h-3.5 fill-slate-950" />
             <span>CHƠI LẬT BÀI NGAY</span>
@@ -280,7 +307,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
                   Phuong Catcher
                 </h2>
                 <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">
-                  Siêu nhân dùng phím ⬅️ ➡️ hứng ảnh bạn gái và tim, né sét đỏ!
+                  Dùng phím ⬅️ ➡️ hoặc trượt ngón tay hứng ảnh bạn gái và tim!
                 </p>
               </div>
             </div>
@@ -288,7 +315,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
             <div className="grid grid-cols-3 gap-1.5 py-2.5 px-3 rounded-2xl bg-slate-950/80 border border-slate-800/80 text-center my-2 text-xs">
               <div>
                 <div className="text-[9px] text-slate-500 font-bold uppercase">Điều khiển</div>
-                <div className="font-extrabold text-amber-300 text-[11px]">Phím ⬅️ ➡️</div>
+                <div className="font-extrabold text-amber-300 text-[11px]">Phím / Trượt tay</div>
               </div>
               <div className="border-x border-slate-800">
                 <div className="text-[9px] text-slate-500 font-bold uppercase">Khởi điểm</div>
@@ -303,8 +330,11 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
 
           <button
             type="button"
-            onClick={onSelectCatcher}
-            className="w-full mt-3 py-3 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-sky-500/30 transition-all cursor-pointer group-hover:scale-[1.02]"
+            onClick={() => {
+              haptics.tap();
+              onSelectCatcher();
+            }}
+            className="w-full mt-3 py-3 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-sky-500/30 transition-all cursor-pointer group-hover:scale-[1.02] active:scale-95"
           >
             <Play className="w-3.5 h-3.5 fill-white" />
             <span>CHƠI SIÊU NHÂN NGAY</span>

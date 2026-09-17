@@ -38,14 +38,14 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       {/* Lưới 11 hàng x 18 cột tự động co giãn to nhất có thể */}
       <div
         ref={gridContainerRef}
-        className="grid gap-1 sm:gap-1.5"
+        className="grid gap-0.5 sm:gap-1.5"
         style={{
           gridTemplateColumns: `repeat(${TOTAL_COLS}, minmax(0, 1fr))`,
           gridTemplateRows: `repeat(${TOTAL_ROWS}, minmax(0, 1fr))`,
-          height: 'calc(100vh - 36px)',
+          height: 'calc(100dvh - 20px)',
           maxHeight: '920px',
-          width: 'calc((100vh - 36px) * 18 / 11)',
-          maxWidth: 'calc(100vw - 235px)',
+          width: 'calc((100dvh - 20px) * 18 / 11)',
+          maxWidth: 'calc(100vw - 124px)',
           aspectRatio: '18 / 11',
         }}
       >

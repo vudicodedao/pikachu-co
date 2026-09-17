@@ -25,6 +25,7 @@ import {
   clearLeaderboard,
   MEMORY_LEADERBOARD_KEY,
 } from '../utils/leaderboard';
+import { haptics } from '../utils/haptics';
 
 interface MemoryGameProps {
   onBackToLobby: () => void;
@@ -101,6 +102,7 @@ export const MemoryGame: React.FC<MemoryGameProps> = ({ onBackToLobby }) => {
   const [bgmVolume, setBgmVolume] = useState(0.45);
   const [showVolumePop, setShowVolumePop] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isPortrait, setIsPortrait] = useState(() => window.innerWidth < window.innerHeight);
 
   const [customPhotos, setCustomPhotos] = useState<Record<number, string>>({});
   const volumeBtnRef = useRef<HTMLButtonElement | null>(null);
@@ -120,11 +122,17 @@ export const MemoryGame: React.FC<MemoryGameProps> = ({ onBackToLobby }) => {
     const onFullscreenChange = () => {
       setIsFullscreen(Boolean(document.fullscreenElement));
     };
+    const onResize = () => {
+      setIsPortrait(window.innerWidth < window.innerHeight);
+    };
+
     document.addEventListener('fullscreenchange', onFullscreenChange);
+    window.addEventListener('resize', onResize);
 
     return () => {
       memorySound.stopBgm();
       document.removeEventListener('fullscreenchange', onFullscreenChange);
+      window.removeEventListener('resize', onResize);
     };
   }, []);
 
@@ -229,6 +237,7 @@ export const MemoryGame: React.FC<MemoryGameProps> = ({ onBackToLobby }) => {
     if (clickedCard.isFlipped || clickedCard.isMatched) return;
 
     // Lật lá bài
+    haptics.tap();
     memorySound.playFlip();
     const newCards = [...cards];
     newCards[cardIndex] = { ...clickedCard, isFlipped: true };
@@ -247,6 +256,7 @@ export const MemoryGame: React.FC<MemoryGameProps> = ({ onBackToLobby }) => {
       if (firstCard.photoId === secondCard.photoId) {
         // KHỚP CẶP THÀNH CÔNG!
         setTimeout(() => {
+          haptics.catchItem();
           memorySound.playMatch();
           const matchedCards = [...newCards];
           matchedCards[firstIdx] = { ...firstCard, isMatched: true };
@@ -267,6 +277,7 @@ export const MemoryGame: React.FC<MemoryGameProps> = ({ onBackToLobby }) => {
           const remainingUnmatched = matchedCards.filter((c) => !c.isMatched).length;
           if (remainingUnmatched === 0) {
             // Màn chơi hoàn thành!
+            haptics.success();
             memorySound.playStageClear();
             confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
 
@@ -282,6 +293,7 @@ export const MemoryGame: React.FC<MemoryGameProps> = ({ onBackToLobby }) => {
       } else {
         // LẬT SAI: Úp bài lại sau 650ms
         setTimeout(() => {
+          haptics.tap();
           memorySound.playMismatch();
           const unFlippedCards = [...newCards];
           unFlippedCards[firstIdx] = { ...firstCard, isFlipped: false };
@@ -327,78 +339,88 @@ export const MemoryGame: React.FC<MemoryGameProps> = ({ onBackToLobby }) => {
   const timePercent = (timeLeft / TOTAL_GAME_TIME) * 100;
   const matchedPairsInStage = cards.filter((c) => c.isMatched).length / 2;
 
+  // Nếu màn hình dọc và stage có nhiều cột hơn hàng, hoán đổi cols & rows để lá bài to và phủ trọn màn hình
+  const effectiveCols = isPortrait && stage.cols > stage.rows ? stage.rows : stage.cols;
+  const effectiveRows = isPortrait && stage.cols > stage.rows ? stage.cols : stage.rows;
+
   return (
-    <div className="w-screen h-screen bg-slate-950 text-slate-100 flex flex-col justify-between select-none overflow-hidden relative">
+    <div className="w-screen min-h-dvh h-dvh bg-slate-950 text-slate-100 flex flex-col justify-between select-none overflow-hidden relative overscroll-none">
       {/* 1. THANH HEADER ĐIỀU KHIỂN TRÊN CÙNG */}
-      <header className="shrink-0 h-16 px-4 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between z-30 backdrop-blur-md">
-        {/* Nút Về Menu chính */}
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onBackToLobby}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-rose-300 text-xs font-bold transition-all cursor-pointer shadow-sm"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Menu chính</span>
-          </button>
+      <header className="shrink-0 bg-slate-900/95 border-b border-slate-800 z-30 backdrop-blur-md px-2.5 py-1.5 sm:px-4 sm:py-0 sm:h-14 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-0">
+        {/* ROW 1 (Mobile & Desktop): Điều hướng, Màn chơi, Đồng hồ, Điểm */}
+        <div className="w-full sm:w-auto flex items-center justify-between sm:gap-4">
+          <div className="flex items-center gap-1.5 sm:gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                haptics.tap();
+                onBackToLobby();
+              }}
+              className="flex items-center gap-1 px-2 py-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-rose-300 text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden md:inline">Menu chính</span>
+            </button>
 
-          {/* Thông tin Màn chơi */}
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-1 rounded-lg bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs font-black font-arcade">
-              MÀN {stage.stage}/8
-            </span>
-            <span className="hidden md:inline text-xs font-bold text-slate-300 truncate max-w-[200px]">
-              {stage.name}
-            </span>
+            {/* Thông tin Màn chơi */}
+            <div className="flex items-center gap-1.5">
+              <span className="px-2 py-1 rounded-lg bg-rose-500/20 border border-rose-500/30 text-rose-300 text-[11px] sm:text-xs font-black font-arcade">
+                MÀN {stage.stage}/8
+              </span>
+              <span className="hidden lg:inline text-xs font-bold text-slate-300 truncate max-w-[180px]">
+                {stage.name}
+              </span>
+            </div>
           </div>
-        </div>
 
-        {/* Đồng hồ đếm ngược 10 phút & Tiến trình */}
-        <div className="flex flex-col items-center justify-center px-2">
-          <div className="flex items-center gap-1.5 text-xs sm:text-sm font-black font-arcade tracking-wider">
-            <Clock className={`w-4 h-4 ${timeLeft < 60 ? 'text-red-500 animate-spin' : 'text-amber-300'}`} />
-            <span className={timeLeft < 60 ? 'text-red-400 animate-pulse' : 'text-amber-300'}>
-              {formatTime(timeLeft)}
-            </span>
+          {/* Đồng hồ đếm ngược 10 phút & Tiến trình */}
+          <div className="flex flex-col items-center justify-center px-1 sm:px-2">
+            <div className="flex items-center gap-1 text-[11px] sm:text-sm font-black font-arcade tracking-wider">
+              <Clock className={`w-3.5 h-3.5 ${timeLeft < 60 ? 'text-red-500 animate-spin' : 'text-amber-300'}`} />
+              <span className={timeLeft < 60 ? 'text-red-400 animate-pulse' : 'text-amber-300'}>
+                {formatTime(timeLeft)}
+              </span>
+            </div>
+            <div className="w-20 sm:w-40 h-1 sm:h-1.5 bg-slate-950 rounded-full overflow-hidden mt-0.5 border border-slate-800">
+              <div
+                className={`h-full transition-all duration-300 ${
+                  timePercent > 40
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-400'
+                    : timePercent > 15
+                    ? 'bg-gradient-to-r from-amber-500 to-yellow-400'
+                    : 'bg-gradient-to-r from-red-600 to-rose-500 animate-pulse'
+                }`}
+                style={{ width: `${timePercent}%` }}
+              />
+            </div>
           </div>
-          <div className="w-32 sm:w-48 h-1.5 bg-slate-950 rounded-full overflow-hidden mt-1 border border-slate-800">
-            <div
-              className={`h-full transition-all duration-300 ${
-                timePercent > 40
-                  ? 'bg-gradient-to-r from-emerald-500 to-teal-400'
-                  : timePercent > 15
-                  ? 'bg-gradient-to-r from-amber-500 to-yellow-400'
-                  : 'bg-gradient-to-r from-red-600 to-rose-500 animate-pulse'
-              }`}
-              style={{ width: `${timePercent}%` }}
-            />
-          </div>
-        </div>
 
-        {/* Điểm số & Bộ điều khiển Âm thanh */}
-        <div className="flex items-center gap-2 sm:gap-3">
           {/* Điểm số */}
-          <div className="flex items-center gap-2 px-3 py-1 bg-slate-950/80 rounded-xl border border-slate-800">
+          <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-950/80 rounded-xl border border-slate-800 shrink-0">
             <div className="text-right">
-              <div className="text-[10px] text-slate-500 uppercase font-bold">Điểm</div>
-              <div className="text-sm sm:text-base font-black text-amber-300 font-arcade">
+              <div className="text-[9px] text-slate-500 uppercase font-bold leading-none">Điểm</div>
+              <div className="text-xs sm:text-base font-black text-amber-300 font-arcade leading-tight">
                 {score.toLocaleString()}
               </div>
             </div>
             {combo > 1 && (
-              <div className="text-xs text-orange-400 font-bold flex items-center gap-0.5 animate-bounce">
-                <Flame className="w-3.5 h-3.5" />
+              <div className="text-[10px] text-orange-400 font-bold flex items-center gap-0.5 animate-bounce">
+                <Flame className="w-3 h-3" />
                 <span>x{combo}!</span>
               </div>
             )}
           </div>
+        </div>
 
+        {/* ROW 2 trên Mobile (< sm) HOẶC Cụm bên phải trên Desktop (>= sm) */}
+        <div className="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-1.5 sm:gap-2.5 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-800/80">
           {/* Cụm chỉnh âm thanh độc lập */}
           <div className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-xl border border-slate-800 relative">
             {/* Nhạc nền BGM */}
             <button
               type="button"
               onClick={() => {
+                haptics.tap();
                 const next = !bgmEnabled;
                 setBgmEnabled(next);
                 memorySound.setBgmEnabled(next);
@@ -417,7 +439,10 @@ export const MemoryGame: React.FC<MemoryGameProps> = ({ onBackToLobby }) => {
             <button
               ref={volumeBtnRef}
               type="button"
-              onClick={() => setShowVolumePop(!showVolumePop)}
+              onClick={() => {
+                haptics.tap();
+                setShowVolumePop(!showVolumePop);
+              }}
               className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
                 showVolumePop
                   ? 'bg-amber-400 text-slate-950 border-amber-400'
@@ -432,7 +457,7 @@ export const MemoryGame: React.FC<MemoryGameProps> = ({ onBackToLobby }) => {
             {showVolumePop && (
               <div
                 ref={volumePopRef}
-                className="absolute right-0 top-full mt-2 w-9 h-40 p-2 bg-slate-900/98 border border-slate-700 rounded-xl shadow-2xl flex flex-col items-center justify-between z-50 animate-fadeIn backdrop-blur-md"
+                className="absolute left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-0 top-full mt-2 w-9 h-40 p-2 bg-slate-900/98 border border-slate-700 rounded-xl shadow-2xl flex flex-col items-center justify-between z-50 animate-fadeIn backdrop-blur-md"
               >
                 <span className="text-[8px] font-black text-rose-400">MAX</span>
                 <input
@@ -456,6 +481,7 @@ export const MemoryGame: React.FC<MemoryGameProps> = ({ onBackToLobby }) => {
             <button
               type="button"
               onClick={() => {
+                haptics.tap();
                 const next = !soundEnabled;
                 setSoundEnabled(next);
                 memorySound.sfxEnabled = next;
@@ -471,43 +497,68 @@ export const MemoryGame: React.FC<MemoryGameProps> = ({ onBackToLobby }) => {
             </button>
           </div>
 
-          {/* Nút Bảng xếp hạng */}
-          <button
-            type="button"
-            onClick={() => setIsLeaderboardOpen(true)}
-            title="Bảng xếp hạng kỷ lục"
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-400 cursor-pointer shadow-sm transition-all"
-          >
-            <Trophy className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            {/* Nút Bảng xếp hạng */}
+            <button
+              type="button"
+              onClick={() => {
+                haptics.tap();
+                setIsLeaderboardOpen(true);
+              }}
+              title="Bảng xếp hạng kỷ lục"
+              className="p-1.5 sm:p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-400 cursor-pointer shadow-sm transition-all active:scale-95"
+            >
+              <Trophy className="w-4 h-4" />
+            </button>
 
-          {/* Nút Chơi lại trận mới */}
-          <button
-            type="button"
-            onClick={handleRestartFullGame}
-            title="Chơi lại từ đầu (Reset 10 phút)"
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 cursor-pointer shadow-sm"
-          >
-            <RotateCcw className="w-4 h-4" />
-          </button>
+            {/* Nút Toàn màn hình F11 */}
+            <button
+              type="button"
+              onClick={() => {
+                haptics.tap();
+                if (!document.fullscreenElement) {
+                  document.documentElement.requestFullscreen().catch(() => {});
+                } else {
+                  document.exitFullscreen().catch(() => {});
+                }
+              }}
+              title={isFullscreen ? 'Thu nhỏ màn hình' : 'Toàn màn hình'}
+              className="p-1.5 sm:p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sky-300 cursor-pointer shadow-sm transition-all active:scale-95"
+            >
+              {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+            </button>
+
+            {/* Nút Chơi lại trận mới */}
+            <button
+              type="button"
+              onClick={() => {
+                haptics.tap();
+                handleRestartFullGame();
+              }}
+              title="Chơi lại từ đầu (Reset 10 phút)"
+              className="p-1.5 sm:p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 cursor-pointer shadow-sm transition-all active:scale-95"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </header>
 
       {/* 2. VÙNG BÀN CỜ LẬT BÀI (Ô VUÔNG CHUẨN PIKACHU, SẮC NÉT, CO GIÃN TỐI ƯU) */}
-      <main className="flex-1 w-full flex items-center justify-center p-2 sm:p-4 overflow-hidden relative">
+      <main className="flex-1 w-full flex items-center justify-center p-1.5 sm:p-4 overflow-hidden relative">
         <div
-          className="grid gap-2 sm:gap-2.5 items-center justify-center mx-auto transition-all"
+          className="grid gap-1 sm:gap-2.5 items-center justify-center mx-auto transition-all"
           style={{
-            gridTemplateColumns: `repeat(${stage.cols}, minmax(0, 1fr))`,
-            gridTemplateRows: `repeat(${stage.rows}, minmax(0, 1fr))`,
-            // Giới hạn kích thước tối đa 68px mỗi ô vuông như Pikachu để ảnh luôn sắc nét 100%
-            width: `min(calc(100vw - 32px), calc((100vh - 140px) * ${stage.cols} / ${stage.rows}), ${
-              stage.cols * 68 + (stage.cols - 1) * 10
+            gridTemplateColumns: `repeat(${effectiveCols}, minmax(0, 1fr))`,
+            gridTemplateRows: `repeat(${effectiveRows}, minmax(0, 1fr))`,
+            // Tối ưu kích thước ô cờ: trên mobile co giãn vừa khít, trên desktop tối đa 68px
+            width: `min(calc(100vw - 16px), calc((100dvh - 135px) * ${effectiveCols} / ${effectiveRows}), ${
+              effectiveCols * 68 + (effectiveCols - 1) * 8
             }px)`,
-            height: `min(calc(100vh - 140px), calc((100vw - 32px) * ${stage.rows} / ${stage.cols}), ${
-              stage.rows * 68 + (stage.rows - 1) * 10
+            height: `min(calc(100dvh - 135px), calc((100vw - 16px) * ${effectiveRows} / ${effectiveCols}), ${
+              effectiveRows * 68 + (effectiveRows - 1) * 8
             }px)`,
-            aspectRatio: `${stage.cols} / ${stage.rows}`,
+            aspectRatio: `${effectiveCols} / ${effectiveRows}`,
           }}
         >
           {cards.map((card, idx) => {

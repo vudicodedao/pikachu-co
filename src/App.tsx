@@ -24,8 +24,15 @@ import { FlappyGame } from './components/FlappyGame';
 import { GameLobby } from './components/GameLobby';
 import { MemoryGame } from './components/MemoryGame';
 import { CatcherGame } from './components/CatcherGame';
+import { LockScreen } from './components/LockScreen';
+import { LandscapePromptModal } from './components/LandscapePromptModal';
+import { isAuthenticated, lockPortal } from './utils/auth';
+import { haptics } from './utils/haptics';
 
 export const App: React.FC = () => {
+  // Trạng thái mở khóa bảo mật riêng tư (Mật khẩu: 02102004)
+  const [isUnlocked, setIsUnlocked] = useState<boolean>(() => isAuthenticated());
+
   // Chế độ màn hình: 'lobby' (Sảnh chọn game), 'pikachu', 'flappy', 'memory', 'catcher'
   const [activeView, setActiveView] = useState<'lobby' | 'pikachu' | 'flappy' | 'memory' | 'catcher'>('lobby');
 
@@ -67,6 +74,8 @@ export const App: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() => getLeaderboard());
+  const [isPortrait, setIsPortrait] = useState(() => window.innerWidth < 768 && window.innerWidth < window.innerHeight);
+  const [bypassLandscapePrompt, setBypassLandscapePrompt] = useState(false);
 
   // Theo dõi thời gian chơi tổng cộng để lưu kỷ lục
   const sessionStartTimeRef = useRef(Date.now());
@@ -85,10 +94,18 @@ export const App: React.FC = () => {
     const onFullscreenChange = () => {
       setIsFullscreen(Boolean(document.fullscreenElement));
     };
+    const onOrientationCheck = () => {
+      setIsPortrait(window.innerWidth < 768 && window.innerWidth < window.innerHeight);
+    };
+
     document.addEventListener('fullscreenchange', onFullscreenChange);
+    window.addEventListener('resize', onOrientationCheck);
+    window.addEventListener('orientationchange', onOrientationCheck);
 
     return () => {
       document.removeEventListener('fullscreenchange', onFullscreenChange);
+      window.removeEventListener('resize', onOrientationCheck);
+      window.removeEventListener('orientationchange', onOrientationCheck);
     };
   }, []);
 
@@ -220,6 +237,7 @@ export const App: React.FC = () => {
 
     // 1. Chưa chọn ô nào trước đó
     if (!selectedTile) {
+      haptics.tap();
       sound.playClick();
       setSelectedTile(pos);
       setHintPair(null);
@@ -228,6 +246,7 @@ export const App: React.FC = () => {
 
     // 2. Click lại đúng ô đang chọn -> Hủy chọn
     if (selectedTile.r === pos.r && selectedTile.c === pos.c) {
+      haptics.tap();
       setSelectedTile(null);
       return;
     }
@@ -235,6 +254,7 @@ export const App: React.FC = () => {
     // 3. Click vào ô khác loại -> Đổi sang chọn ô mới
     const selectedVal = board[selectedTile.r][selectedTile.c];
     if (selectedVal !== tileVal) {
+      haptics.tap();
       sound.playClick();
       setSelectedTile(pos);
       return;
@@ -245,6 +265,7 @@ export const App: React.FC = () => {
 
     if (path) {
       // Nối thành công!
+      haptics.catchItem();
       sound.playMatch();
       setLastPath(path);
 
@@ -269,6 +290,7 @@ export const App: React.FC = () => {
       // Kiểm tra dọn sạch bàn cờ
       const remaining = countRemainingTiles(nextBoard);
       if (remaining === 0) {
+        haptics.success();
         sound.playVictory();
         const bonus = timeLeft * 15;
         setTimeBonus(bonus);
@@ -299,6 +321,7 @@ export const App: React.FC = () => {
       setBoard(nextBoard);
     } else {
       // Không thể nối được -> Báo lỗi & chọn ô mới
+      haptics.tap();
       sound.playMismatch();
       setSelectedTile(pos);
     }
@@ -307,6 +330,7 @@ export const App: React.FC = () => {
   // Trợ giúp: Gợi ý nước đi
   const handleHint = () => {
     if (hintsLeft <= 0 || status !== 'playing') return;
+    haptics.tap();
     const pair = findValidPair(board);
     if (pair) {
       sound.playHint();
@@ -322,6 +346,7 @@ export const App: React.FC = () => {
   // Trợ giúp: Đổi vị trí thủ công
   const handleShuffle = () => {
     if (shufflesLeft <= 0 || status !== 'playing') return;
+    haptics.tap();
     sound.playShuffle();
     setShufflesLeft((prev) => prev - 1);
     setSelectedTile(null);
@@ -368,7 +393,8 @@ export const App: React.FC = () => {
   // Vào game Pikachu: bật lại nhạc nền nếu người dùng đã bật trong settings
   const handleEnterPikachu = () => {
     setActiveView('pikachu');
-    if (settings.bgmEnabled && bgmEnabled) {
+    setBypassLandscapePrompt(false);
+    if (bgmEnabled) {
       bgm.setEnabled(true);
     }
   };
@@ -397,6 +423,18 @@ export const App: React.FC = () => {
     setActiveView('lobby');
   };
 
+  // Khóa cổng thông tin bảo vệ
+  const handleLock = () => {
+    lockPortal();
+    bgm.setEnabled(false);
+    setIsUnlocked(false);
+  };
+
+  // 0. MÀN HÌNH KHÓA BẢO MẬT (LOCK SCREEN)
+  if (!isUnlocked) {
+    return <LockScreen onUnlock={() => setIsUnlocked(true)} />;
+  }
+
   // 1. MÀN HÌNH SẢNH CHỌN GAME (LOBBY)
   if (activeView === 'lobby') {
     return (
@@ -405,6 +443,7 @@ export const App: React.FC = () => {
         onSelectFlappy={handleEnterFlappy}
         onSelectMemory={handleEnterMemory}
         onSelectCatcher={handleEnterCatcher}
+        onLock={handleLock}
         pikachuBestScore={leaderboard[0]?.score || 0}
       />
     );
@@ -430,7 +469,7 @@ export const App: React.FC = () => {
   const remainingPairs = Math.floor(remainingTiles / 2);
 
   return (
-    <main className="h-screen w-screen bg-slate-950 text-slate-100 flex flex-row overflow-hidden select-none">
+    <main className="min-h-dvh h-dvh w-screen bg-slate-950 text-slate-100 flex flex-row overflow-hidden select-none overscroll-none">
       {/* Cột Sidebar bên trái thu gọn */}
       <GameSidebar
         stageConfig={stageConfig}
@@ -459,7 +498,7 @@ export const App: React.FC = () => {
       />
 
       {/* Khu vực Bàn cờ bên phải mở rộng tối đa theo toàn bộ chiều cao màn hình */}
-      <div className="flex-1 h-screen flex items-center justify-center p-2 sm:p-3 overflow-hidden relative">
+      <div className="flex-1 h-full flex items-center justify-center p-1 sm:p-3 overflow-hidden relative">
         <GameBoard
           board={board}
           selectedTile={selectedTile}
@@ -519,6 +558,11 @@ export const App: React.FC = () => {
         onRetryStage={handleRetryStage}
         onRestartFromBeginning={handleRestartFromBeginning}
       />
+
+      {/* Modal nhắc xoay ngang điện thoại khi chơi Pikachu (Phương án A) */}
+      {isPortrait && !bypassLandscapePrompt && (
+        <LandscapePromptModal onDismiss={() => setBypassLandscapePrompt(true)} />
+      )}
     </main>
   );
 };
